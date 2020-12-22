@@ -1,0 +1,187 @@
+<html>
+
+<body bgcolor="#252525">
+    <div id="authentifacator" class="centered" style="display: flex; flex-direction: column;">
+        <input id="authKey" type="password" placeholder="Authentification Key"></input>
+        <button onclick="btnAuthentificate()" style="margin: 0px; margin-top: 5px;">Confirm</button>
+    </div>
+    <div id="editor" style="display: none;">
+        <div>
+            <div style="display: flex; flex-direction: column; justify-content: space-between; width: 400px;">
+                <input id="key" type="text" placeholder="Key" style="margin-bottom: 5px;"></input>
+                <input id="value" type="text" placeholder="Value" style="margin-bottom: 5px;"></input>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; width: 400px; margin-top: 10px;">
+                <button onclick="btnGetAllResources()" style="margin-left: 0px;">Get all</button>
+                <button onclick="btnGetResource()">Get</button>
+                <button onclick="btnPostResource()">Post</button>
+                <button onclick="btnDeleteResource()"
+                    style="margin-right: 0px; background-color: #e34d4d;">Delete</button>
+            </div>
+        </div>
+
+        <div style="margin-top: 20; color: white;">
+            <p>Status Code: <span id="status" style="color: #e34d4d"></span></p>
+            <pre id="response"></pre>
+        </div>
+    </div>
+</body>
+
+<script>
+    let authKey = "";
+
+    async function btnAuthentificate() {
+        authKey = document.getElementById("authKey").value;
+
+        response = await getAllResources();
+        if (response.status == 200) {
+            document.getElementById("authentifacator").style.display = "none";
+            document.getElementById("editor").style.display = "inline"
+        } else {
+            alert("Authentification failed.")
+        }
+    }
+
+    async function btnGetAllResources() {
+        response = await getAllResources();
+        document.getElementById("status").innerHTML = response.status;
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
+    }
+
+    async function btnGetResource() {
+        let key = document.getElementById("key").value;
+        if (key == "") key = "%20";
+
+        response = await getResource(key);
+        document.getElementById("status").innerHTML = response.status;
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
+    }
+
+    async function btnPostResource() {
+        let key = document.getElementById("key").value;
+        let value = document.getElementById("value").value;
+        response = await postResource(key, value);
+        document.getElementById("status").innerHTML = response.status;
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
+    }
+
+    async function btnDeleteResource() {
+        let key = document.getElementById("key").value;
+        if (key == "") key = "%20";
+
+        response = await deleteResource(key);
+        document.getElementById("status").innerHTML = response.status;
+        if (response.status != 204) {
+            document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
+        } else {
+            document.getElementById("response").innerHTML = "";
+        }
+    }
+
+    // --------------------------------------------------
+    let baseUrl = "http://" + window.location.host + "/api/v2/res";
+
+    function getAllResources() {
+        return fetch(baseUrl, {
+            method: "get",
+            headers: { "x-auth-key": authKey },
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
+    }
+
+    function getResource(key) {
+        return fetch(baseUrl + "/" + key, {
+            method: "get",
+            headers: { "x-auth-key": authKey },
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
+    }
+
+    function postResource(key, value) {
+        return fetch(baseUrl, {
+            method: "post",
+            headers: { "x-auth-key": authKey },
+            body: JSON.stringify({
+                key: key,
+                value: value
+            }),
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
+    }
+
+    function deleteResource(key) {
+        return fetch(baseUrl + "/" + key, {
+            method: "delete",
+            headers: { "x-auth-key": authKey },
+        }).then(r => {
+            if (r.status != 204) {
+                return r.json().then(data => ({ status: r.status, json: data }));
+            } else {
+                return ({ status: r.status, json: "" });
+            }
+        })
+    }
+
+    // --------------------------------------------------
+
+    function syntaxHighlight(json) {
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            var cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+    }
+</script>
+
+<style>
+    input {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 4px;
+        background-color: #f1f1f1;
+    }
+
+    button {
+        background-color: #4fbd54;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        padding: 10px 16px;
+        margin-left: 5px;
+        margin-right: 5px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        flex-grow: 1;
+    }
+
+    .centered {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 400px;
+        height: 74px;
+        margin-left: -200px;
+        margin-top: -37px;
+    }
+
+    .key {
+        color: crimson
+    }
+
+    .string {
+        color: steelblue
+    }
+</style>
+
+</html>

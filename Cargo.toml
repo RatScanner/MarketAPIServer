@@ -1,0 +1,33 @@
+[package]
+name = "market-api-server"
+version = "0.1.0"
+authors = ["Blightbuster <blight.developer@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# web
+tide = "0.6.0"
+surf = "1.0.3"
+
+# db
+diesel = { version = "1.4.4", features = ["sqlite"] }
+libsqlite3-sys = { version = "0.17.1", features = ["bundled"] }
+
+# log
+log = "0.4.8"
+env_logger = "0.7.1"
+
+# other
+async-std = { version = "1.5.0", features = ["attributes"] }
+serde = { version = "1.0.105", features = ["derive"] }
+serde_json = "1.0.50"
+dotenv = "0.15.0"
+chrono = { version = "0.4.11", features = ["serde"] }
+thiserror = "1.0.14"
+flate2 = "1.0.14"
+dashmap = "3.10.0"
+mime = "0.3.16"
+rust-embed = "5.5.1"
+percent-encoding = "2.1.0"
