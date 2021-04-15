@@ -8,55 +8,33 @@ pub struct Resource {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct MarketItem {
-    #[serde(rename = "uid")]
-    pub uid: String,
-
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "shortName")]
-    pub short_name: String,
-
-    #[serde(rename = "slots")]
-    pub slots: i32,
-
+pub struct Item {
+    pub id: String,
+    #[serde(rename = "iconLink")]
+    pub icon_link: Option<String>,
     #[serde(rename = "wikiLink")]
-    pub wiki_link: String,
-
-    #[serde(rename = "imgLink")]
-    pub img_link: String,
-
+    pub wiki_link: Option<String>,
+    #[serde(rename = "imageLink")]
+    pub image_link: Option<String>,
     #[serde(flatten)]
     pub price_data: PriceData,
+    #[serde(rename = "traderPrices")]
+    pub trader_prices: Vec<TraderPriceData>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PriceData {
-    #[serde(rename = "timestamp")]
     pub timestamp: i32,
-
-    #[serde(rename = "price")]
-    pub price: i32,
-
+    #[serde(rename = "basePrice")]
+    pub base_price: i32,
     #[serde(rename = "avg24hPrice")]
-    pub avg_24h_price: i32,
+    pub avg_24h_price: Option<i32>,
+}
 
-    #[serde(rename = "avg7dPrice")]
-    pub avg_7d_price: i32,
-
-    #[serde(rename = "avg24hAgo")]
-    pub avg_24h_ago: i32,
-
-    #[serde(rename = "avg7dAgo")]
-    pub avg_7d_ago: i32,
-
-    #[serde(rename = "traderName")]
-    pub trader_name: String,
-
-    #[serde(rename = "traderPrice")]
-    pub trader_price: i32,
-
-    #[serde(rename = "traderCurrency")]
-    pub trader_currency: String,
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TraderPriceData {
+    #[serde(rename = "traderId")]
+    pub trader_id: String,
+    pub timestamp: i32,
+    pub price: i32,
 }

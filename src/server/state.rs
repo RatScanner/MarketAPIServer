@@ -1,4 +1,6 @@
-use super::models::MarketItem;
+use super::models::Item;
+use crate::schema::*;
+use diesel::prelude::*;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -26,7 +28,7 @@ impl std::ops::Deref for StateHandle {
 }
 
 pub struct State {
-    market_items: dashmap::DashMap<String, Vec<MarketItem>>,
+    market_items: dashmap::DashMap<String, Vec<Item>>,
     market_items_gzip: dashmap::DashMap<String, Vec<u8>>,
 }
 
@@ -49,93 +51,49 @@ impl State {
         conn: &diesel::SqliteConnection,
         lang: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let market_items = {
-            use crate::schema::*;
-            use diesel::prelude::*;
+        let items = {
+            let mut items = Vec::new();
 
-            let mut market_items = Vec::new();
-
-            for market_item in market_item::table.load::<crate::db::models::MarketItem>(conn)? {
-                let mut price_data = match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .order(price_data::timestamp.desc())
+            for item in item_::table.load::<crate::db::models::Item>(conn)? {
+                let price_data = match price_data_::table
+                    .filter(price_data_::item_id.eq(&item.id))
+                    .order(price_data_::timestamp.desc())
                     .first::<crate::db::models::PriceData>(conn)
                     .optional()?
                 {
                     Some(pd) => super::models::PriceData {
                         timestamp: pd.timestamp,
-                        price: pd.price,
+                        base_price: pd.base_price,
                         avg_24h_price: pd.avg_24h_price,
-                        avg_7d_price: pd.avg_7d_price,
-                        avg_24h_ago: 0,
-                        avg_7d_ago: 0,
-                        trader_name: pd.trader_name,
-                        trader_price: pd.trader_price,
-                        trader_currency: pd.trader_currency,
                     },
                     None => continue,
                 };
 
-                // Get average from 24h ago
-                match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .filter(price_data::timestamp.gt(price_data.timestamp - 60 * 60 * 24))
-                    .order(price_data::timestamp.asc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => {
-                        price_data.avg_24h_ago = pd.avg_24h_price;
-                    }
-                    None => {}
-                }
+                // TODO: ...
+                let trader_prices = Vec::new();
+                /*let trader_prices = trader_price_data_::table
+                .filter(trader_price_data_::item_id.eq(&item.id))
+                .order(trader_price_data_::timestamp.desc())
+                .load::<crate::db::models::TraderPriceData>(conn)?
+                .into_iter()
+                .map(|tpd| super::models::TraderPriceData {
+                    trader_id: tpd.trader_id,
+                    timestamp: tpd.timestamp,
+                    price: tpd.price,
+                })
+                .collect();*/
 
-                // Get average from 7 days ago
-                match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .filter(price_data::timestamp.gt(price_data.timestamp - 60 * 60 * 24 * 7))
-                    .order(price_data::timestamp.asc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => {
-                        price_data.avg_7d_ago = pd.avg_7d_price;
-                    }
-                    None => {}
-                }
-
-                let market_item_name = match market_item_name::table
-                    .filter(market_item_name::uid.eq(&market_item.uid))
-                    .filter(market_item_name::lang.eq(lang))
-                    .first::<crate::db::models::MarketItemName>(conn)
-                    .optional()?
-                {
-                    Some(market_item_name) => market_item_name,
-                    None => {
-                        match market_item_name::table
-                            .filter(market_item_name::uid.eq(&market_item.uid))
-                            .filter(market_item_name::lang.eq("en"))
-                            .first::<crate::db::models::MarketItemName>(conn)
-                            .optional()?
-                        {
-                            Some(market_item_name) => market_item_name,
-                            None => continue,
-                        }
-                    }
-                };
-
-                market_items.push(super::models::MarketItem {
-                    uid: market_item.uid,
-                    name: market_item_name.name,
-                    short_name: market_item_name.short_name,
-                    slots: market_item.slots,
-                    wiki_link: market_item.wiki_link,
-                    img_link: market_item.img_link,
+                items.push(super::models::Item {
+                    id: item.id,
+                    icon_link: item.icon_link,
+                    wiki_link: item.wiki_link,
+                    image_link: item.image_link,
                     price_data,
+                    trader_prices,
                 });
             }
 
-            market_items
+            items
         };
 
         // Compress data
@@ -147,7 +105,7 @@ impl State {
 
             let mut e = GzEncoder::new(Vec::new(), compression_level);
 
-            let data = serde_json::to_string(&market_items)?;
+            let data = serde_json::to_string(&items)?;
             let data = data.as_bytes();
             e.write_all(data)?;
             let compressed_data = e.finish()?;
@@ -156,7 +114,7 @@ impl State {
                 .insert(lang.to_string(), compressed_data);
         }
 
-        self.market_items.insert(lang.to_string(), market_items);
+        self.market_items.insert(lang.to_string(), items);
         Ok(())
     }
 

@@ -1,7 +1,9 @@
-DROP TABLE price_data;
+DROP TABLE trader_price_data_;
 
-DROP TABLE market_item_name;
+DROP TABLE price_data_;
 
-DROP TABLE market_item;
+DROP TABLE trader_;
 
-DROP TABLE resource;
+DROP TABLE item_;
+
+DROP TABLE resource_;

@@ -1,33 +1,36 @@
-CREATE TABLE resource (
+CREATE TABLE resource_ (
   key   TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
 );
 
-CREATE TABLE market_item (
-  uid        TEXT PRIMARY KEY NOT NULL,
-  slots      INTEGER NOT NULL,
-  wiki_link  TEXT NOT NULL,
-  img_link   TEXT NOT NULL
+CREATE TABLE item_ (
+  id         TEXT PRIMARY KEY NOT NULL,
+  icon_link  TEXT,
+  wiki_link  TEXT,
+  image_link TEXT
 );
 
-CREATE TABLE market_item_name (
-  uid        TEXT NOT NULL,
-  lang       TEXT NOT NULL,
-  name       TEXT NOT NULL,
-  short_name TEXT NOT NULL,
-  
-  PRIMARY KEY (uid, lang)
+CREATE TABLE trader_ (
+  id         TEXT PRIMARY KEY NOT NULL,
+  name       TEXT NOT NULL
 );
 
-CREATE TABLE price_data (
-  uid             TEXT NOT NULl,
+CREATE TABLE price_data_ (
+  item_id         TEXT NOT NULL,
   timestamp       INTEGER NOT NULL,
-  price           INTEGER NOT NULL,
-  avg_24h_price   INTEGER NOT NULL,
-  avg_7d_price    INTEGER NOT NULL,
-  trader_name     TEXT NOT NULL,
-  trader_price    INTEGER NOT NULL,
-  trader_currency TEXT NOT NULL,
 
-  PRIMARY KEY (uid, timestamp)
+  base_price      INTEGER NOT NULL,
+  avg_24h_price   INTEGER,
+
+  PRIMARY KEY (item_id, timestamp)
+);
+
+CREATE TABLE trader_price_data_ (
+  item_id         TEXT NOT NULL,
+  trader_id       TEXT NOT NULL,
+  timestamp       INTEGER NOT NULL,
+
+  price           INTEGER NOT NULL,
+
+  PRIMARY KEY (item_id, trader_id, timestamp)
 );

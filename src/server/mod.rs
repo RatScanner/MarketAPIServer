@@ -3,6 +3,8 @@ mod models;
 mod service;
 mod state;
 
+use crate::schema::*;
+use diesel::prelude::*;
 use error::ResultExt as _;
 
 #[derive(rust_embed::RustEmbed)]
@@ -41,7 +43,6 @@ pub async fn start() {
 }
 
 fn get_db_connection() -> diesel::ConnectionResult<diesel::sqlite::SqliteConnection> {
-    use crate::diesel::Connection;
     let database_url = std::env::var("DATABASE_URL").expect("Could not find env DATABASE_URL");
     Ok(diesel::sqlite::SqliteConnection::establish(&database_url)?)
 }
@@ -49,8 +50,6 @@ fn get_db_connection() -> diesel::ConnectionResult<diesel::sqlite::SqliteConnect
 async fn get_resource(req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
         use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
 
         let key = req.param::<String>("key").unwrap_or(String::from(""));
         let key = percent_encoding::percent_decode(key.as_bytes())
@@ -60,8 +59,8 @@ async fn get_resource(req: tide::Request<state::StateHandle>) -> tide::Response 
 
         let conn = get_db_connection().server_error()?;
 
-        let resource = resource::table
-            .filter(resource::key.eq(key))
+        let resource = resource_::table
+            .filter(resource_::key.eq(key))
             .first::<db_models::Resource>(&conn) /*  Result<Resource, DieselError> */
             .optional() /*  Result<Option<Resource>, DieselError> */
             .server_error() /*  Result<Option<Resource>, Error> */ ? /*  Option<Resource> */
@@ -82,12 +81,10 @@ async fn get_resource(req: tide::Request<state::StateHandle>) -> tide::Response 
 async fn get_all_resources(_: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
         use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
 
         let conn = get_db_connection().server_error()?;
 
-        let resources = resource::table
+        let resources = resource_::table
             .load::<db_models::Resource>(&conn)
             .server_error()?;
 
@@ -109,8 +106,6 @@ async fn get_all_resources(_: tide::Request<state::StateHandle>) -> tide::Respon
 async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
         use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
 
         let conn = get_db_connection().server_error()?;
 
@@ -120,24 +115,24 @@ async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Resp
             value: post_resource.value,
         };
 
-        let exists = resource::table
-            .filter(resource::key.eq(&post_resource.key))
+        let exists = resource_::table
+            .filter(resource_::key.eq(&post_resource.key))
             .count()
             .get_result::<i64>(&conn)
             .server_error()?
             != 0;
 
         if exists {
-            diesel::update(resource::table)
-                .filter(resource::key.eq(&post_resource.key))
+            diesel::update(resource_::table)
+                .filter(resource_::key.eq(&post_resource.key))
                 .set((
-                    resource::key.eq(&post_resource.key),
-                    resource::value.eq(&post_resource.value),
+                    resource_::key.eq(&post_resource.key),
+                    resource_::value.eq(&post_resource.value),
                 ))
                 .execute(&conn)
                 .server_error()?;
         } else {
-            diesel::insert_into(resource::table)
+            diesel::insert_into(resource_::table)
                 .values(&db_models::NewResource {
                     key: post_resource.key.as_str(),
                     value: post_resource.value.as_str(),
@@ -155,9 +150,6 @@ async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Resp
 
 async fn delete_resource(req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        use crate::schema::*;
-        use diesel::prelude::*;
-
         let key = req.param::<String>("key").unwrap_or(String::from(""));
         let key = percent_encoding::percent_decode(key.as_bytes())
             .decode_utf8()
@@ -166,7 +158,7 @@ async fn delete_resource(req: tide::Request<state::StateHandle>) -> tide::Respon
 
         let conn = get_db_connection().server_error()?;
 
-        diesel::delete(resource::table.filter(resource::key.eq(key)))
+        diesel::delete(resource_::table.filter(resource_::key.eq(key)))
             .execute(&conn)
             .server_error()?;
 

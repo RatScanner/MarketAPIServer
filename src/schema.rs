@@ -1,44 +1,48 @@
 table! {
-    market_item (uid) {
-        uid -> Text,
-        slots -> Integer,
-        wiki_link -> Text,
-        img_link -> Text,
+    item_ (id) {
+        id -> Text,
+        icon_link -> Nullable<Text>,
+        wiki_link -> Nullable<Text>,
+        image_link -> Nullable<Text>,
     }
 }
 
 table! {
-    market_item_name (uid, lang) {
-        uid -> Text,
-        lang -> Text,
-        name -> Text,
-        short_name -> Text,
-    }
-}
-
-table! {
-    price_data (uid, timestamp) {
-        uid -> Text,
+    price_data_ (item_id, timestamp) {
+        item_id -> Text,
         timestamp -> Integer,
-        price -> Integer,
-        avg_24h_price -> Integer,
-        avg_7d_price -> Integer,
-        trader_name -> Text,
-        trader_price -> Integer,
-        trader_currency -> Text,
+        base_price -> Integer,
+        avg_24h_price -> Nullable<Integer>,
     }
 }
 
 table! {
-    resource (key) {
+    resource_ (key) {
         key -> Text,
         value -> Text,
     }
 }
 
+table! {
+    trader_ (id) {
+        id -> Text,
+        name -> Text,
+    }
+}
+
+table! {
+    trader_price_data_ (item_id, trader_id, timestamp) {
+        item_id -> Text,
+        trader_id -> Text,
+        timestamp -> Integer,
+        price -> Integer,
+    }
+}
+
 allow_tables_to_appear_in_same_query!(
-    market_item,
-    market_item_name,
-    price_data,
-    resource,
+    item_,
+    price_data_,
+    resource_,
+    trader_,
+    trader_price_data_,
 );

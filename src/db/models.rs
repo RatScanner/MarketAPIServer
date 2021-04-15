@@ -2,72 +2,77 @@ use crate::schema::*;
 
 #[derive(Debug, Queryable)]
 pub struct Resource {
-    pub key: String,   // Primary key
-    pub value: String, //
+    pub key: String,
+    pub value: String,
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "resource"]
+#[table_name = "resource_"]
 pub struct NewResource<'a> {
-    pub key: &'a str,   // Primary key
-    pub value: &'a str, //
+    pub key: &'a str,
+    pub value: &'a str,
 }
 
 #[derive(Debug, Queryable)]
-pub struct MarketItem {
-    pub uid: String,       // Primary key
-    pub slots: i32,        //
-    pub wiki_link: String, //
-    pub img_link: String,  //
+pub struct Item {
+    pub id: String,
+    pub icon_link: Option<String>,
+    pub wiki_link: Option<String>,
+    pub image_link: Option<String>,
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "market_item"]
-pub struct NewMarketItem<'a> {
-    pub uid: &'a str,       // Primary key
-    pub slots: i32,         //
-    pub wiki_link: &'a str, //
-    pub img_link: &'a str,  //
+#[table_name = "item_"]
+pub struct NewItem<'a> {
+    pub id: &'a str,
+    pub icon_link: Option<&'a str>,
+    pub wiki_link: Option<&'a str>,
+    pub image_link: Option<&'a str>,
 }
 
 #[derive(Debug, Queryable)]
-pub struct MarketItemName {
-    pub uid: String,        // Compound key part 1
-    pub lang: String,       // Compound key part 2
-    pub name: String,       //
-    pub short_name: String, //
+pub struct Trader {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "market_item_name"]
-pub struct NewMarketItemName<'a> {
-    pub uid: &'a str,        // Compound key part 1
-    pub lang: &'a str,       // Compound key part 2
-    pub name: &'a str,       //
-    pub short_name: &'a str, //
+#[table_name = "trader_"]
+pub struct NewTrader<'a> {
+    pub id: &'a str,
+    pub name: &'a str,
 }
 
 #[derive(Debug, Queryable)]
 pub struct PriceData {
-    pub uid: String,             // Compound key part 1
-    pub timestamp: i32,          // Compound key part 2
-    pub price: i32,              //
-    pub avg_24h_price: i32,      //
-    pub avg_7d_price: i32,       //
-    pub trader_name: String,     //
-    pub trader_price: i32,       //
-    pub trader_currency: String, //
+    pub item_id: String,
+    pub timestamp: i32,
+    pub base_price: i32,
+    pub avg_24h_price: Option<i32>,
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "price_data"]
+#[table_name = "price_data_"]
 pub struct NewPriceData<'a> {
-    pub uid: &'a str,             // Compound key part 1
-    pub timestamp: i32,           // Compound key part 2
-    pub price: i32,               //
-    pub avg_24h_price: i32,       //
-    pub avg_7d_price: i32,        //
-    pub trader_name: &'a str,     //
-    pub trader_price: i32,        //
-    pub trader_currency: &'a str, //
+    pub item_id: &'a str,
+    pub timestamp: i32,
+    pub base_price: i32,
+    pub avg_24h_price: Option<i32>,
+}
+
+#[derive(Debug, Queryable)]
+pub struct TraderPriceData {
+    pub item_id: String,
+    pub trader_id: String,
+    pub timestamp: i32,
+    pub price: i32,
+}
+
+#[derive(Debug, Insertable)]
+#[table_name = "trader_price_data_"]
+pub struct NewTraderPriceData<'a> {
+    pub item_id: &'a str,
+    pub trader_id: &'a str,
+    pub timestamp: i32,
+    pub price: i32,
 }

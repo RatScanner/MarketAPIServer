@@ -1,4 +1,6 @@
 use super::state::StateHandle;
+use crate::schema::*;
+use diesel::prelude::*;
 
 pub fn start(state: StateHandle) {
     std::thread::spawn(move || {
@@ -17,7 +19,7 @@ pub fn start(state: StateHandle) {
 }
 
 fn run(state: StateHandle) {
-    let languages = ["en", "ru", "de", "fr", "es", "cn"];
+    let languages = ["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
     let mut languages_cycle = languages.iter().cycle();
 
     loop {
@@ -42,21 +44,34 @@ fn run(state: StateHandle) {
 }
 
 async fn fetch_and_update(
-    lang: &str,
+    _lang: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     use diesel::prelude::*;
 
     // Fetch
-    let market_items = crate::fetch::fetch(Some(lang)).await?;
+    let timestamp_fallback = chrono::Utc::now().timestamp() as i32;
+    let items = crate::fetch::fetch().await?;
 
     // Write to db
     let conn = super::get_db_connection()?;
 
     conn.transaction::<_, Box<dyn std::error::Error + Send + Sync + 'static>, _>(|| {
-        for market_item in market_items {
-            upsert_market_item(&conn, &market_item)?;
-            upsert_market_item_name(&conn, &market_item, lang)?;
-            upsert_price_data(&conn, &market_item)?;
+        for item in items {
+            // Calc timestamp
+            let timestamp = match &item.updated {
+                Some(_) => {
+                    // TODO: ...
+                    timestamp_fallback
+                }
+                None => timestamp_fallback,
+            };
+
+            // Upsert ...
+            upsert_item(&conn, &item)?;
+            upsert_price_data(&conn, &item, timestamp)?;
+            for trader_price in &item.trader_prices {
+                upsert_trader_price_data(&conn, &item.id, trader_price, timestamp)?;
+            }
         }
         Ok(())
     })?;
@@ -64,73 +79,32 @@ async fn fetch_and_update(
     Ok(())
 }
 
-fn upsert_market_item(
+fn upsert_item(
     conn: &diesel::sqlite::SqliteConnection,
-    market_item: &crate::fetch::models::MarketItem,
+    item: &crate::fetch::models::Item,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    use crate::schema::*;
-    use diesel::prelude::*;
-
-    let exists = market_item::table
-        .filter(market_item::uid.eq(&market_item.uid))
+    let exists = item_::table
+        .filter(item_::id.eq(&item.id))
         .count()
         .get_result::<i64>(conn)?
         != 0;
 
     if exists {
-        diesel::update(market_item::table)
-            .filter(market_item::uid.eq(&market_item.uid))
+        diesel::update(item_::table)
+            .filter(item_::id.eq(&item.id))
             .set((
-                market_item::slots.eq(market_item.slots),
-                market_item::wiki_link.eq(&market_item.wiki_link),
-                market_item::img_link.eq(&market_item.img_link),
+                item_::icon_link.eq(&item.icon_link),
+                item_::wiki_link.eq(&item.wiki_link),
+                item_::image_link.eq(&item.image_link),
             ))
             .execute(conn)?;
     } else {
-        diesel::insert_into(market_item::table)
-            .values(&crate::db::models::NewMarketItem {
-                uid: &market_item.uid,
-                slots: market_item.slots,
-                wiki_link: &market_item.wiki_link,
-                img_link: &market_item.img_link,
-            })
-            .execute(conn)?;
-    }
-
-    Ok(())
-}
-
-fn upsert_market_item_name(
-    conn: &diesel::sqlite::SqliteConnection,
-    market_item: &crate::fetch::models::MarketItem,
-    lang: &str,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    use crate::schema::*;
-    use diesel::prelude::*;
-
-    let exists = market_item_name::table
-        .filter(market_item_name::uid.eq(&market_item.uid))
-        .filter(market_item_name::lang.eq(lang))
-        .count()
-        .get_result::<i64>(conn)?
-        != 0;
-
-    if exists {
-        diesel::update(market_item_name::table)
-            .filter(market_item_name::uid.eq(&market_item.uid))
-            .filter(market_item_name::lang.eq(lang))
-            .set((
-                market_item_name::name.eq(&market_item.name),
-                market_item_name::short_name.eq(&market_item.short_name),
-            ))
-            .execute(conn)?;
-    } else {
-        diesel::insert_into(market_item_name::table)
-            .values(&crate::db::models::NewMarketItemName {
-                uid: &market_item.uid,
-                lang,
-                name: &market_item.name,
-                short_name: &market_item.short_name,
+        diesel::insert_into(item_::table)
+            .values(&crate::db::models::NewItem {
+                id: &item.id,
+                icon_link: item.icon_link.as_deref(),
+                wiki_link: item.wiki_link.as_deref(),
+                image_link: item.image_link.as_deref(),
             })
             .execute(conn)?;
     }
@@ -140,42 +114,96 @@ fn upsert_market_item_name(
 
 fn upsert_price_data(
     conn: &diesel::sqlite::SqliteConnection,
-    market_item: &crate::fetch::models::MarketItem,
+    item: &crate::fetch::models::Item,
+    timestamp: i32,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    use crate::schema::*;
-    use diesel::prelude::*;
-
-    let exists = price_data::table
-        .filter(price_data::uid.eq(&market_item.uid))
-        .filter(price_data::timestamp.eq(market_item.timestamp))
+    let exists = price_data_::table
+        .filter(price_data_::item_id.eq(&item.id))
+        .filter(price_data_::timestamp.eq(timestamp))
         .count()
         .get_result::<i64>(conn)?
         != 0;
 
     if exists {
-        diesel::update(price_data::table)
-            .filter(price_data::uid.eq(&market_item.uid))
-            .filter(price_data::timestamp.eq(market_item.timestamp))
+        diesel::update(price_data_::table)
+            .filter(price_data_::item_id.eq(&item.id))
+            .filter(price_data_::timestamp.eq(timestamp))
             .set((
-                price_data::price.eq(market_item.price),
-                price_data::avg_24h_price.eq(market_item.avg_24h_price),
-                price_data::avg_7d_price.eq(market_item.avg_7d_price),
-                price_data::trader_name.eq(&market_item.trader_name),
-                price_data::trader_price.eq(market_item.trader_price),
-                price_data::trader_currency.eq(&market_item.trader_currency),
+                price_data_::base_price.eq(item.base_price),
+                price_data_::avg_24h_price.eq(item.avg_24h_price),
             ))
             .execute(conn)?;
     } else {
-        diesel::insert_into(price_data::table)
+        diesel::insert_into(price_data_::table)
             .values(&crate::db::models::NewPriceData {
-                uid: &market_item.uid,
-                timestamp: market_item.timestamp,
-                price: market_item.price,
-                avg_24h_price: market_item.avg_24h_price,
-                avg_7d_price: market_item.avg_7d_price,
-                trader_name: &market_item.trader_name,
-                trader_price: market_item.trader_price,
-                trader_currency: &market_item.trader_currency,
+                item_id: &item.id,
+                timestamp,
+                base_price: item.base_price,
+                avg_24h_price: item.avg_24h_price,
+            })
+            .execute(conn)?;
+    }
+
+    Ok(())
+}
+
+fn upsert_trader_price_data(
+    conn: &diesel::sqlite::SqliteConnection,
+    item_id: &str,
+    trader_price: &crate::fetch::models::TraderPrice,
+    timestamp: i32,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    upsert_trader(conn, &trader_price.trader)?;
+
+    let exists = trader_price_data_::table
+        .filter(trader_price_data_::item_id.eq(item_id))
+        .filter(trader_price_data_::trader_id.eq(&trader_price.trader.id))
+        .filter(trader_price_data_::timestamp.eq(timestamp))
+        .count()
+        .get_result::<i64>(conn)?
+        != 0;
+
+    if exists {
+        diesel::update(trader_price_data_::table)
+            .filter(trader_price_data_::item_id.eq(item_id))
+            .filter(trader_price_data_::trader_id.eq(&trader_price.trader.id))
+            .filter(trader_price_data_::timestamp.eq(timestamp))
+            .set(trader_price_data_::price.eq(trader_price.price))
+            .execute(conn)?;
+    } else {
+        diesel::insert_into(trader_price_data_::table)
+            .values(&crate::db::models::NewTraderPriceData {
+                item_id,
+                trader_id: &trader_price.trader.id,
+                timestamp,
+                price: trader_price.price,
+            })
+            .execute(conn)?;
+    }
+
+    Ok(())
+}
+
+fn upsert_trader(
+    conn: &diesel::sqlite::SqliteConnection,
+    trader: &crate::fetch::models::Trader,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let exists = trader_::table
+        .filter(trader_::id.eq(&trader.id))
+        .count()
+        .get_result::<i64>(conn)?
+        != 0;
+
+    if exists {
+        diesel::update(trader_::table)
+            .filter(trader_::id.eq(&trader.id))
+            .set(trader_::name.eq(&trader.name))
+            .execute(conn)?;
+    } else {
+        diesel::insert_into(trader_::table)
+            .values(&crate::db::models::NewTrader {
+                id: &trader.id,
+                name: &trader.name,
             })
             .execute(conn)?;
     }
