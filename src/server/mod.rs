@@ -30,5 +30,5 @@ pub async fn start(state: crate::state::StateHandle) {
 
     // Started
     log::info!("Server started!");
-    app.listen("0.0.0.0:8080").await.unwrap();
+    app.listen("0.0.0.0:8081").await.unwrap();
 }
