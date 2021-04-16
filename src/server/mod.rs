@@ -28,16 +28,16 @@ pub async fn start() {
     let mut authed_router = tide::with_state(state);
     authed_router.middleware(authenticate);
 
-    app.at("/api/v2/res/:key").get(get_resource);
+    app.at("/res/:key").get(get_resource);
     authed_router.at("").get(get_all_resources);
     authed_router.at("").post(post_resource);
     authed_router.at("/:key").delete(delete_resource);
 
     app.at("/").get(|_req| async { "Market API Server" });
-    app.at("/api/v2/resEditor").get(get_resource_editor);
-    app.at("/api/v2/res").nest(authed_router);
+    app.at("/resEditor").get(get_resource_editor);
+    app.at("/res").nest(authed_router);
 
-    app.at("/api/v2/all").get(get_all_endpoint);
+    app.at("/all").get(get_all_endpoint);
 
     println!("Server started!");
 
