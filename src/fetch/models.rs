@@ -13,7 +13,7 @@ pub enum Response {
 pub struct Item {
     pub id: String,
     #[serde(rename = "basePrice")]
-    pub base_price: i32,
+    pub base_price: i64,
     pub updated: Option<String>,
     #[serde(rename = "iconLink")]
     pub icon_link: Option<String>,
@@ -22,14 +22,14 @@ pub struct Item {
     #[serde(rename = "imageLink")]
     pub image_link: Option<String>,
     #[serde(rename = "avg24hPrice")]
-    pub avg_24h_price: Option<i32>,
+    pub avg_24h_price: Option<i64>,
     #[serde(rename = "traderPrices")]
     pub trader_prices: Vec<TraderPrice>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TraderPrice {
-    pub price: i32,
+    pub price: i64,
     pub trader: Trader,
 }
 

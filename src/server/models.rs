@@ -24,17 +24,17 @@ pub struct Item {
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PriceData {
-    pub timestamp: i32,
+    pub timestamp: i64,
     #[serde(rename = "basePrice")]
-    pub base_price: i32,
+    pub base_price: i64,
     #[serde(rename = "avg24hPrice")]
-    pub avg_24h_price: Option<i32>,
+    pub avg_24h_price: Option<i64>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TraderPriceData {
     #[serde(rename = "traderId")]
     pub trader_id: String,
-    pub timestamp: i32,
-    pub price: i32,
+    pub timestamp: i64,
+    pub price: i64,
 }

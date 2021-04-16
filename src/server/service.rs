@@ -1,13 +1,16 @@
 use super::state::StateHandle;
-use crate::schema::*;
-use diesel::prelude::*;
+use sqlx::{Connection, Sqlite, Transaction};
 
 pub fn start(state: StateHandle) {
     std::thread::spawn(move || {
         loop {
             let state = std::panic::AssertUnwindSafe(state.clone());
 
-            let service_result = std::panic::catch_unwind(move || run(state.0));
+            let service_result = std::panic::catch_unwind(move || {
+                async_std::task::block_on(async move {
+                    run(state.0).await;
+                });
+            });
 
             // Restart service on crash
             match service_result {
@@ -18,19 +21,17 @@ pub fn start(state: StateHandle) {
     });
 }
 
-fn run(state: StateHandle) {
+async fn run(state: StateHandle) {
     let languages = ["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
     let mut languages_cycle = languages.iter().cycle();
 
     loop {
         // Fetch and update
-        let res = async_std::task::block_on(async {
-            fetch_and_update(languages_cycle.next().unwrap()).await
-        });
+        let res = fetch_and_update(languages_cycle.next().unwrap()).await;
 
         match res {
             Ok(_) => {
-                if let Err(e) = state.update_from_db(&languages) {
+                if let Err(e) = state.update_from_db(&languages).await {
                     log::error!("failed to update from db: {}", e);
                 }
                 std::thread::sleep(std::time::Duration::from_secs(60 * 10));
@@ -46,167 +47,132 @@ fn run(state: StateHandle) {
 async fn fetch_and_update(
     _lang: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    use diesel::prelude::*;
-
     // Fetch
-    let timestamp_fallback = chrono::Utc::now().timestamp() as i32;
+    let timestamp_fallback = chrono::Utc::now().timestamp();
     let items = crate::fetch::fetch().await?;
 
     // Write to db
-    let conn = super::get_db_connection()?;
+    let mut conn = super::get_db_connection().await?;
+    conn.transaction::<_, _, Box<dyn std::error::Error + Send + Sync + 'static>>(move |conn| {
+        Box::pin(async move {
+            for item in items {
+                // Calc timestamp
+                let timestamp = match &item.updated {
+                    Some(_) => {
+                        // TODO: ...
+                        timestamp_fallback
+                    }
+                    None => timestamp_fallback,
+                };
 
-    conn.transaction::<_, Box<dyn std::error::Error + Send + Sync + 'static>, _>(|| {
-        for item in items {
-            // Calc timestamp
-            let timestamp = match &item.updated {
-                Some(_) => {
-                    // TODO: ...
-                    timestamp_fallback
+                // Upsert ...
+                upsert_item(conn, &item).await?;
+                upsert_price_data(conn, &item, timestamp).await?;
+                for trader_price in &item.trader_prices {
+                    upsert_trader_price_data(conn, &item.id, trader_price, timestamp).await?;
                 }
-                None => timestamp_fallback,
-            };
-
-            // Upsert ...
-            upsert_item(&conn, &item)?;
-            upsert_price_data(&conn, &item, timestamp)?;
-            for trader_price in &item.trader_prices {
-                upsert_trader_price_data(&conn, &item.id, trader_price, timestamp)?;
             }
-        }
-        Ok(())
-    })?;
+
+            Ok(())
+        })
+    })
+    .await?;
 
     Ok(())
 }
 
-fn upsert_item(
-    conn: &diesel::sqlite::SqliteConnection,
+async fn upsert_item(
+    conn: &mut Transaction<'_, Sqlite>,
     item: &crate::fetch::models::Item,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let exists = item_::table
-        .filter(item_::id.eq(&item.id))
-        .count()
-        .get_result::<i64>(conn)?
-        != 0;
-
-    if exists {
-        diesel::update(item_::table)
-            .filter(item_::id.eq(&item.id))
-            .set((
-                item_::icon_link.eq(&item.icon_link),
-                item_::wiki_link.eq(&item.wiki_link),
-                item_::image_link.eq(&item.image_link),
-            ))
-            .execute(conn)?;
-    } else {
-        diesel::insert_into(item_::table)
-            .values(&crate::db::models::NewItem {
-                id: &item.id,
-                icon_link: item.icon_link.as_deref(),
-                wiki_link: item.wiki_link.as_deref(),
-                image_link: item.image_link.as_deref(),
-            })
-            .execute(conn)?;
-    }
+    sqlx::query!(
+        r#"
+        INSERT INTO item_ (id, icon_link, wiki_link, image_link)
+        VALUES(?1, ?2, ?3, ?4)
+        ON CONFLICT(id) 
+        DO UPDATE SET
+            icon_link = ?2,
+            wiki_link = ?3,
+            image_link = ?4
+        "#,
+        item.id,
+        item.icon_link,
+        item.wiki_link,
+        item.image_link,
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
 
-fn upsert_price_data(
-    conn: &diesel::sqlite::SqliteConnection,
+async fn upsert_price_data(
+    conn: &mut Transaction<'_, Sqlite>,
     item: &crate::fetch::models::Item,
-    timestamp: i32,
+    timestamp: i64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let exists = price_data_::table
-        .filter(price_data_::item_id.eq(&item.id))
-        .filter(price_data_::timestamp.eq(timestamp))
-        .count()
-        .get_result::<i64>(conn)?
-        != 0;
-
-    if exists {
-        diesel::update(price_data_::table)
-            .filter(price_data_::item_id.eq(&item.id))
-            .filter(price_data_::timestamp.eq(timestamp))
-            .set((
-                price_data_::base_price.eq(item.base_price),
-                price_data_::avg_24h_price.eq(item.avg_24h_price),
-            ))
-            .execute(conn)?;
-    } else {
-        diesel::insert_into(price_data_::table)
-            .values(&crate::db::models::NewPriceData {
-                item_id: &item.id,
-                timestamp,
-                base_price: item.base_price,
-                avg_24h_price: item.avg_24h_price,
-            })
-            .execute(conn)?;
-    }
+    sqlx::query!(
+        r#"
+        INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
+        VALUES(?1, ?2, ?3, ?4)
+        ON CONFLICT(item_id, timestamp) 
+        DO UPDATE SET
+            base_price = ?3,
+            avg_24h_price = ?4
+        "#,
+        item.id,
+        timestamp,
+        item.base_price,
+        item.avg_24h_price,
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
 
-fn upsert_trader_price_data(
-    conn: &diesel::sqlite::SqliteConnection,
+async fn upsert_trader_price_data(
+    conn: &mut Transaction<'_, Sqlite>,
     item_id: &str,
     trader_price: &crate::fetch::models::TraderPrice,
-    timestamp: i32,
+    timestamp: i64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    upsert_trader(conn, &trader_price.trader)?;
+    upsert_trader(conn, &trader_price.trader).await?;
 
-    let exists = trader_price_data_::table
-        .filter(trader_price_data_::item_id.eq(item_id))
-        .filter(trader_price_data_::trader_id.eq(&trader_price.trader.id))
-        .filter(trader_price_data_::timestamp.eq(timestamp))
-        .count()
-        .get_result::<i64>(conn)?
-        != 0;
-
-    if exists {
-        diesel::update(trader_price_data_::table)
-            .filter(trader_price_data_::item_id.eq(item_id))
-            .filter(trader_price_data_::trader_id.eq(&trader_price.trader.id))
-            .filter(trader_price_data_::timestamp.eq(timestamp))
-            .set(trader_price_data_::price.eq(trader_price.price))
-            .execute(conn)?;
-    } else {
-        diesel::insert_into(trader_price_data_::table)
-            .values(&crate::db::models::NewTraderPriceData {
-                item_id,
-                trader_id: &trader_price.trader.id,
-                timestamp,
-                price: trader_price.price,
-            })
-            .execute(conn)?;
-    }
+    sqlx::query!(
+        r#"
+        INSERT INTO trader_price_data_ (item_id, trader_id, timestamp, price)
+        VALUES(?1, ?2, ?3, ?4)
+        ON CONFLICT(item_id, trader_id, timestamp) 
+        DO UPDATE SET price = ?4
+        "#,
+        item_id,
+        trader_price.trader.id,
+        timestamp,
+        trader_price.price,
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }
 
-fn upsert_trader(
-    conn: &diesel::sqlite::SqliteConnection,
+async fn upsert_trader(
+    conn: &mut Transaction<'_, Sqlite>,
     trader: &crate::fetch::models::Trader,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let exists = trader_::table
-        .filter(trader_::id.eq(&trader.id))
-        .count()
-        .get_result::<i64>(conn)?
-        != 0;
-
-    if exists {
-        diesel::update(trader_::table)
-            .filter(trader_::id.eq(&trader.id))
-            .set(trader_::name.eq(&trader.name))
-            .execute(conn)?;
-    } else {
-        diesel::insert_into(trader_::table)
-            .values(&crate::db::models::NewTrader {
-                id: &trader.id,
-                name: &trader.name,
-            })
-            .execute(conn)?;
-    }
+    sqlx::query!(
+        r#"
+        INSERT INTO trader_ (id, name)
+        VALUES(?1, ?2)
+        ON CONFLICT(id) 
+        DO UPDATE SET name = ?2
+        "#,
+        trader.id,
+        trader.name,
+    )
+    .execute(conn)
+    .await?;
 
     Ok(())
 }

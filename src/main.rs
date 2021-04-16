@@ -1,14 +1,8 @@
 #![deny(rust_2018_idioms)]
 #![recursion_limit = "128"]
 
-#[macro_use]
-extern crate diesel;
-
-mod db;
 mod fetch;
 mod server;
-
-mod schema;
 
 #[async_std::main]
 async fn main() {

@@ -12,8 +12,7 @@ tide = "0.6.0"
 surf = "1.0.3"
 
 # db
-diesel = { version = "1.4.4", features = ["sqlite"] }
-libsqlite3-sys = { version = "0.17.1", features = ["bundled"] }
+sqlx = { version = "0.5.2", features = ["runtime-async-std-native-tls", "sqlite"] }
 
 # log
 log = "0.4.8"
@@ -31,3 +30,6 @@ dashmap = "3.10.0"
 mime = "0.3.16"
 rust-embed = "5.5.1"
 percent-encoding = "2.1.0"
+
+[profile.dev.package."*"]
+opt-level = 3

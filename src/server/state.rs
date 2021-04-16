@@ -1,6 +1,4 @@
 use super::models::Item;
-use crate::schema::*;
-use diesel::prelude::*;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -33,55 +31,69 @@ pub struct State {
 }
 
 impl State {
-    pub fn update_from_db(
+    pub async fn update_from_db(
         &self,
         languages: &[&str],
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let conn = super::get_db_connection()?;
+        let mut conn = super::get_db_connection().await?;
 
         for lang in languages {
-            self.update(&conn, lang)?;
+            self.update(&mut conn, lang).await?;
         }
 
         Ok(())
     }
 
-    fn update(
+    async fn update(
         &self,
-        conn: &diesel::SqliteConnection,
+        conn: &mut sqlx::SqliteConnection,
         lang: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         let items = {
             let mut items = Vec::new();
 
-            for item in item_::table.load::<crate::db::models::Item>(conn)? {
-                let price_data = match price_data_::table
-                    .filter(price_data_::item_id.eq(&item.id))
-                    .order(price_data_::timestamp.desc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => super::models::PriceData {
-                        timestamp: pd.timestamp,
-                        base_price: pd.base_price,
-                        avg_24h_price: pd.avg_24h_price,
-                    },
+            for item in sqlx::query!("SELECT * FROM item_")
+                .fetch_all(&mut *conn)
+                .await?
+            {
+                let price_data = sqlx::query!(
+                    r#"
+                    SELECT * FROM price_data_
+                    WHERE item_id = ?
+                    ORDER BY timestamp DESC
+                    "#,
+                    item.id
+                )
+                .map(|record| super::models::PriceData {
+                    timestamp: record.timestamp,
+                    base_price: record.base_price,
+                    avg_24h_price: record.avg_24h_price,
+                })
+                .fetch_optional(&mut *conn)
+                .await?;
+
+                let price_data = match price_data {
+                    Some(price_data) => price_data,
                     None => continue,
                 };
 
-                // TODO: ...
-                let trader_prices = Vec::new();
-                /*let trader_prices = trader_price_data_::table
-                .filter(trader_price_data_::item_id.eq(&item.id))
-                .order(trader_price_data_::timestamp.desc())
-                .load::<crate::db::models::TraderPriceData>(conn)?
-                .into_iter()
-                .map(|tpd| super::models::TraderPriceData {
-                    trader_id: tpd.trader_id,
-                    timestamp: tpd.timestamp,
-                    price: tpd.price,
+                let trader_prices = sqlx::query!(
+                    r#"
+                    SELECT * FROM trader_price_data_
+                    WHERE item_id = ?
+                    GROUP BY trader_id
+                    HAVING MAX(timestamp)
+                    ORDER BY timestamp DESC
+                    "#,
+                    item.id
+                )
+                .map(|record| super::models::TraderPriceData {
+                    trader_id: record.trader_id,
+                    timestamp: record.timestamp,
+                    price: record.price,
                 })
-                .collect();*/
+                .fetch_all(&mut *conn)
+                .await?;
 
                 items.push(super::models::Item {
                     id: item.id,
