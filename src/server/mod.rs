@@ -15,7 +15,7 @@ pub async fn start(state: crate::state::StateHandle) {
     app.at("/resEditor").get(endpoints::get_resource_editor);
     app.at("/res/:key").get(endpoints::get_resource);
     app.at("/res").nest({
-        let mut authed_router = tide::with_state(state);
+        let mut authed_router = tide::with_state(state.clone());
         authed_router.middleware(middlewares::authenticate);
 
         authed_router.at("").get(endpoints::get_all_resources);
@@ -24,6 +24,17 @@ pub async fn start(state: crate::state::StateHandle) {
 
         authed_router
     });
+
+    // Upload
+    app.at("/").nest({
+        let mut authed_router = tide::with_state(state);
+        authed_router.middleware(middlewares::authenticate);
+
+        authed_router.at("/upload/:file").put(endpoints::upload);
+
+        authed_router
+    });
+    app.at("/file/:file").get(endpoints::get_file);
 
     // All items
     app.at("/all").get(endpoints::get_all_endpoint);

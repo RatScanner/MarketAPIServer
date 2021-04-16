@@ -117,6 +117,68 @@ pub async fn get_resource_editor(_: tide::Request<StateHandle>) -> tide::Respons
     .await
 }
 
+pub async fn upload(req: tide::Request<StateHandle>) -> tide::Response {
+    error::catch(|| async move {
+        // File name
+        let file_name = req.param::<String>("file").client_error()?;
+        let file_name = percent_encoding::percent_decode(file_name.as_bytes())
+            .decode_utf8()
+            .unwrap();
+        let file_name = file_name.trim();
+
+        // File data
+        let mut file_data = Vec::new();
+        async_std::io::copy(req, &mut file_data)
+            .await
+            .server_error()?;
+
+        // Insert
+        let mut conn = db::get_connection().await.server_error()?;
+        sqlx::query!(
+            r#"
+            INSERT INTO file_ (name, data)
+            VALUES(?1, ?2)
+            ON CONFLICT(name) 
+            DO UPDATE SET data = ?2
+            "#,
+            file_name,
+            file_data,
+        )
+        .execute(&mut conn)
+        .await
+        .server_error()?;
+
+        Ok(tide::Response::new(200)
+            .body_json(&serde_json::json!({}))
+            .server_error()?)
+    })
+    .await
+}
+
+pub async fn get_file(req: tide::Request<StateHandle>) -> tide::Response {
+    error::catch(|| async move {
+        // File name
+        let file_name = req.param::<String>("file").client_error()?;
+        let file_name = percent_encoding::percent_decode(file_name.as_bytes())
+            .decode_utf8()
+            .unwrap();
+        let file_name = file_name.trim();
+
+        // Query
+        let mut conn = db::get_connection().await.server_error()?;
+        let file_data = sqlx::query_scalar!("SELECT data FROM file_ WHERE name = ?", file_name)
+            .fetch_optional(&mut conn)
+            .await
+            .server_error()?
+            .ok_or(tide::http::StatusCode::NOT_FOUND)?;
+        let file_data_buffer = async_std::io::Cursor::new(file_data);
+
+        Ok(tide::Response::with_reader(200, file_data_buffer)
+            .set_mime(mime::APPLICATION_OCTET_STREAM))
+    })
+    .await
+}
+
 pub async fn get_all_endpoint(req: tide::Request<StateHandle>) -> tide::Response {
     #[derive(Debug, serde::Deserialize)]
     struct ReqQuery {

@@ -34,3 +34,8 @@ CREATE TABLE trader_price_data_ (
 
   PRIMARY KEY (item_id, trader_id, timestamp)
 );
+
+CREATE TABLE file_ (
+  name       TEXT PRIMARY KEY NOT NULL,
+  data       BLOB NOT NULL
+);
