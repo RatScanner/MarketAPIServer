@@ -1,4 +1,4 @@
-use super::models::Item;
+use crate::{db, server::models};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -26,7 +26,7 @@ impl std::ops::Deref for StateHandle {
 }
 
 pub struct State {
-    market_items: dashmap::DashMap<String, Vec<Item>>,
+    market_items: dashmap::DashMap<String, Vec<models::Item>>,
     market_items_gzip: dashmap::DashMap<String, Vec<u8>>,
 }
 
@@ -35,7 +35,7 @@ impl State {
         &self,
         languages: &[&str],
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let mut conn = super::get_db_connection().await?;
+        let mut conn = db::get_db_connection().await?;
 
         for lang in languages {
             self.update(&mut conn, lang).await?;
@@ -64,7 +64,7 @@ impl State {
                     "#,
                     item.id
                 )
-                .map(|record| super::models::PriceData {
+                .map(|record| models::PriceData {
                     timestamp: record.timestamp,
                     base_price: record.base_price,
                     avg_24h_price: record.avg_24h_price,
@@ -86,14 +86,14 @@ impl State {
                     item.id,
                     price_data.timestamp,
                 )
-                .map(|record| super::models::TraderPriceData {
+                .map(|record| models::TraderPriceData {
                     trader_id: record.trader_id,
                     price: record.price,
                 })
                 .fetch_all(&mut *conn)
                 .await?;
 
-                items.push(super::models::Item {
+                items.push(models::Item {
                     id: item.id,
                     icon_link: item.icon_link,
                     wiki_link: item.wiki_link,
