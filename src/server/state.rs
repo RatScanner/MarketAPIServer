@@ -52,7 +52,7 @@ impl State {
         let items = {
             let mut items = Vec::new();
 
-            for item in sqlx::query!("SELECT * FROM item_")
+            for item in sqlx::query!("SELECT * FROM item_ ORDER BY id ASC")
                 .fetch_all(&mut *conn)
                 .await?
             {
@@ -80,16 +80,14 @@ impl State {
                 let trader_prices = sqlx::query!(
                     r#"
                     SELECT * FROM trader_price_data_
-                    WHERE item_id = ?
-                    GROUP BY trader_id
-                    HAVING MAX(timestamp)
-                    ORDER BY timestamp DESC
+                    WHERE item_id = ?1 AND timestamp = ?2
+                    ORDER BY price ASC
                     "#,
-                    item.id
+                    item.id,
+                    price_data.timestamp,
                 )
                 .map(|record| super::models::TraderPriceData {
                     trader_id: record.trader_id,
-                    timestamp: record.timestamp,
                     price: record.price,
                 })
                 .fetch_all(&mut *conn)

@@ -35,6 +35,5 @@ pub struct PriceData {
 pub struct TraderPriceData {
     #[serde(rename = "traderId")]
     pub trader_id: String,
-    pub timestamp: i64,
     pub price: i64,
 }
