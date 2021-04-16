@@ -4,12 +4,16 @@ mod service;
 mod state;
 
 use error::ResultExt as _;
+use sqlx::Connection;
 
 #[derive(rust_embed::RustEmbed)]
 #[folder = "public"]
 struct Asset;
 
 pub async fn start() {
+    // Run migrations
+    run_migrations().await.unwrap();
+
     // Init state
     let state = state::StateHandle::new();
 
@@ -40,37 +44,36 @@ pub async fn start() {
     app.listen("0.0.0.0:8080").await.unwrap();
 }
 
-fn get_db_connection() -> diesel::ConnectionResult<diesel::sqlite::SqliteConnection> {
-    use crate::diesel::Connection;
+async fn get_db_connection() -> sqlx::Result<sqlx::SqliteConnection> {
     let database_url = std::env::var("DATABASE_URL").expect("Could not find env DATABASE_URL");
-    Ok(diesel::sqlite::SqliteConnection::establish(&database_url)?)
+    Ok(sqlx::SqliteConnection::connect(&database_url).await?)
+}
+
+async fn run_migrations() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let mut conn = get_db_connection().await?;
+    sqlx::migrate!("./migrations").run(&mut conn).await?;
+    Ok(())
 }
 
 async fn get_resource(req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
-
         let key = req.param::<String>("key").unwrap_or(String::from(""));
         let key = percent_encoding::percent_decode(key.as_bytes())
             .decode_utf8()
             .unwrap();
         let key = key.trim();
 
-        let conn = get_db_connection().server_error()?;
+        let mut conn = get_db_connection().await.server_error()?;
 
-        let resource = resource::table
-            .filter(resource::key.eq(key))
-            .first::<db_models::Resource>(&conn) /*  Result<Resource, DieselError> */
-            .optional() /*  Result<Option<Resource>, DieselError> */
-            .server_error() /*  Result<Option<Resource>, Error> */ ? /*  Option<Resource> */
-            .ok_or(tide::http::StatusCode::NOT_FOUND) /* Result<Resource, StatusCode> */ ?;
-
-        let resource = models::Resource {
-            key: resource.key,
-            value: resource.value,
-        };
+        let resource = sqlx::query!("SELECT * FROM resource_ WHERE key = ?", key)
+            .map(|record| models::Resource {
+                key: record.key,
+                value: record.value,
+            })
+            .fetch_optional(&mut conn)
+            .await
+            .server_error()?
+            .ok_or(tide::http::StatusCode::NOT_FOUND)?;
 
         Ok(tide::Response::new(200)
             .body_json(&resource)
@@ -81,23 +84,16 @@ async fn get_resource(req: tide::Request<state::StateHandle>) -> tide::Response 
 
 async fn get_all_resources(_: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
+        let mut conn = get_db_connection().await.server_error()?;
 
-        let conn = get_db_connection().server_error()?;
-
-        let resources = resource::table
-            .load::<db_models::Resource>(&conn)
-            .server_error()?;
-
-        let resources = resources
-            .into_iter()
-            .map(|res| models::Resource {
-                key: res.key,
-                value: res.value,
+        let resources = sqlx::query!("SELECT * FROM resource_")
+            .map(|record| models::Resource {
+                key: record.key,
+                value: record.value,
             })
-            .collect::<Vec<_>>();
+            .fetch_all(&mut conn)
+            .await
+            .server_error()?;
 
         Ok(tide::Response::new(200)
             .body_json(&resources)
@@ -108,11 +104,7 @@ async fn get_all_resources(_: tide::Request<state::StateHandle>) -> tide::Respon
 
 async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        use crate::db::models as db_models;
-        use crate::schema::*;
-        use diesel::prelude::*;
-
-        let conn = get_db_connection().server_error()?;
+        let mut conn = get_db_connection().await.server_error()?;
 
         let post_resource = req.body_json::<models::Resource>().await.client_error()?;
         let post_resource = models::Resource {
@@ -120,31 +112,19 @@ async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Resp
             value: post_resource.value,
         };
 
-        let exists = resource::table
-            .filter(resource::key.eq(&post_resource.key))
-            .count()
-            .get_result::<i64>(&conn)
-            .server_error()?
-            != 0;
-
-        if exists {
-            diesel::update(resource::table)
-                .filter(resource::key.eq(&post_resource.key))
-                .set((
-                    resource::key.eq(&post_resource.key),
-                    resource::value.eq(&post_resource.value),
-                ))
-                .execute(&conn)
-                .server_error()?;
-        } else {
-            diesel::insert_into(resource::table)
-                .values(&db_models::NewResource {
-                    key: post_resource.key.as_str(),
-                    value: post_resource.value.as_str(),
-                })
-                .execute(&conn)
-                .server_error()?;
-        }
+        sqlx::query!(
+            r#"
+            INSERT INTO resource_ (key, value)
+            VALUES(?1, ?2)
+            ON CONFLICT(key) 
+            DO UPDATE SET value = ?2
+            "#,
+            post_resource.key,
+            post_resource.value,
+        )
+        .execute(&mut conn)
+        .await
+        .server_error()?;
 
         Ok(tide::Response::new(201)
             .body_json(&post_resource)
@@ -155,19 +135,17 @@ async fn post_resource(mut req: tide::Request<state::StateHandle>) -> tide::Resp
 
 async fn delete_resource(req: tide::Request<state::StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        use crate::schema::*;
-        use diesel::prelude::*;
-
         let key = req.param::<String>("key").unwrap_or(String::from(""));
         let key = percent_encoding::percent_decode(key.as_bytes())
             .decode_utf8()
             .unwrap();
         let key = key.trim();
 
-        let conn = get_db_connection().server_error()?;
+        let mut conn = get_db_connection().await.server_error()?;
 
-        diesel::delete(resource::table.filter(resource::key.eq(key)))
-            .execute(&conn)
+        sqlx::query!("DELETE FROM resource_ WHERE key = ?1", key)
+            .execute(&mut conn)
+            .await
             .server_error()?;
 
         Ok(tide::Response::new(204))

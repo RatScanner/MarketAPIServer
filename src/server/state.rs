@@ -1,4 +1,4 @@
-use super::models::MarketItem;
+use super::models::Item;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -26,116 +26,84 @@ impl std::ops::Deref for StateHandle {
 }
 
 pub struct State {
-    market_items: dashmap::DashMap<String, Vec<MarketItem>>,
+    market_items: dashmap::DashMap<String, Vec<Item>>,
     market_items_gzip: dashmap::DashMap<String, Vec<u8>>,
 }
 
 impl State {
-    pub fn update_from_db(
+    pub async fn update_from_db(
         &self,
         languages: &[&str],
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let conn = super::get_db_connection()?;
+        let mut conn = super::get_db_connection().await?;
 
         for lang in languages {
-            self.update(&conn, lang)?;
+            self.update(&mut conn, lang).await?;
         }
 
         Ok(())
     }
 
-    fn update(
+    async fn update(
         &self,
-        conn: &diesel::SqliteConnection,
+        conn: &mut sqlx::SqliteConnection,
         lang: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let market_items = {
-            use crate::schema::*;
-            use diesel::prelude::*;
+        let items = {
+            let mut items = Vec::new();
 
-            let mut market_items = Vec::new();
+            for item in sqlx::query!("SELECT * FROM item_ ORDER BY id ASC")
+                .fetch_all(&mut *conn)
+                .await?
+            {
+                let price_data = sqlx::query!(
+                    r#"
+                    SELECT * FROM price_data_
+                    WHERE item_id = ?
+                    ORDER BY timestamp DESC
+                    "#,
+                    item.id
+                )
+                .map(|record| super::models::PriceData {
+                    timestamp: record.timestamp,
+                    base_price: record.base_price,
+                    avg_24h_price: record.avg_24h_price,
+                })
+                .fetch_optional(&mut *conn)
+                .await?;
 
-            for market_item in market_item::table.load::<crate::db::models::MarketItem>(conn)? {
-                let mut price_data = match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .order(price_data::timestamp.desc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => super::models::PriceData {
-                        timestamp: pd.timestamp,
-                        price: pd.price,
-                        avg_24h_price: pd.avg_24h_price,
-                        avg_7d_price: pd.avg_7d_price,
-                        avg_24h_ago: 0,
-                        avg_7d_ago: 0,
-                        trader_name: pd.trader_name,
-                        trader_price: pd.trader_price,
-                        trader_currency: pd.trader_currency,
-                    },
+                let price_data = match price_data {
+                    Some(price_data) => price_data,
                     None => continue,
                 };
 
-                // Get average from 24h ago
-                match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .filter(price_data::timestamp.gt(price_data.timestamp - 60 * 60 * 24))
-                    .order(price_data::timestamp.asc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => {
-                        price_data.avg_24h_ago = pd.avg_24h_price;
-                    }
-                    None => {}
-                }
+                let trader_prices = sqlx::query!(
+                    r#"
+                    SELECT * FROM trader_price_data_
+                    WHERE item_id = ?1 AND timestamp = ?2
+                    ORDER BY price ASC
+                    "#,
+                    item.id,
+                    price_data.timestamp,
+                )
+                .map(|record| super::models::TraderPriceData {
+                    trader_id: record.trader_id,
+                    price: record.price,
+                })
+                .fetch_all(&mut *conn)
+                .await?;
 
-                // Get average from 7 days ago
-                match price_data::table
-                    .filter(price_data::uid.eq(&market_item.uid))
-                    .filter(price_data::timestamp.gt(price_data.timestamp - 60 * 60 * 24 * 7))
-                    .order(price_data::timestamp.asc())
-                    .first::<crate::db::models::PriceData>(conn)
-                    .optional()?
-                {
-                    Some(pd) => {
-                        price_data.avg_7d_ago = pd.avg_7d_price;
-                    }
-                    None => {}
-                }
-
-                let market_item_name = match market_item_name::table
-                    .filter(market_item_name::uid.eq(&market_item.uid))
-                    .filter(market_item_name::lang.eq(lang))
-                    .first::<crate::db::models::MarketItemName>(conn)
-                    .optional()?
-                {
-                    Some(market_item_name) => market_item_name,
-                    None => {
-                        match market_item_name::table
-                            .filter(market_item_name::uid.eq(&market_item.uid))
-                            .filter(market_item_name::lang.eq("en"))
-                            .first::<crate::db::models::MarketItemName>(conn)
-                            .optional()?
-                        {
-                            Some(market_item_name) => market_item_name,
-                            None => continue,
-                        }
-                    }
-                };
-
-                market_items.push(super::models::MarketItem {
-                    uid: market_item.uid,
-                    name: market_item_name.name,
-                    short_name: market_item_name.short_name,
-                    slots: market_item.slots,
-                    wiki_link: market_item.wiki_link,
-                    img_link: market_item.img_link,
+                items.push(super::models::Item {
+                    id: item.id,
+                    icon_link: item.icon_link,
+                    wiki_link: item.wiki_link,
+                    image_link: item.image_link,
                     price_data,
+                    trader_prices,
                 });
             }
 
-            market_items
+            items
         };
 
         // Compress data
@@ -147,7 +115,7 @@ impl State {
 
             let mut e = GzEncoder::new(Vec::new(), compression_level);
 
-            let data = serde_json::to_string(&market_items)?;
+            let data = serde_json::to_string(&items)?;
             let data = data.as_bytes();
             e.write_all(data)?;
             let compressed_data = e.finish()?;
@@ -156,7 +124,7 @@ impl State {
                 .insert(lang.to_string(), compressed_data);
         }
 
-        self.market_items.insert(lang.to_string(), market_items);
+        self.market_items.insert(lang.to_string(), items);
         Ok(())
     }
 

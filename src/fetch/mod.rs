@@ -1,3 +1,5 @@
+use serde_json::json;
+
 pub mod models;
 
 #[derive(thiserror::Error, Debug)]
@@ -8,27 +10,27 @@ pub enum FetchError {
     #[error("Io error {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Status error")]
-    StatusError,
+    #[error("Status error {0}")]
+    StatusError(surf::http::StatusCode),
+
+    #[error("Graphql error")]
+    Graphql,
 }
 
-pub async fn fetch(lang: Option<&str>) -> Result<Vec<models::MarketItem>, FetchError> {
-    let api_key =
-        std::env::var("TARKOV_MARKET_API_KEY").expect("Could not find env TARKOV_MARKET_API_KEY");
+pub async fn fetch() -> Result<Vec<models::Item>, FetchError> {
+    let uri = "https://tarkov-tools.com/graphql";
+    let body = json!({
+        "query": "{itemsByType(type: any) {id,basePrice,updated,iconLink,wikiLink,imageLink,avg24hPrice,traderPrices { price,trader {id,name}}}}",
+    });
 
-    let base_uri = "https://tarkov-market.com/api/v1/items/all";
-    let uri = match lang {
-        Some(lang) => format!("{}?lang={}", base_uri, lang),
-        None => base_uri.to_string(),
-    };
-
-    let mut response = surf::get(uri).set_header("x-api-key", api_key).await?;
+    let mut response = surf::post(uri).body_json(&body).unwrap().await?;
 
     if !response.status().is_success() {
-        return Err(FetchError::StatusError);
+        return Err(FetchError::StatusError(response.status()));
     }
 
-    let market_items = response.body_json::<Vec<models::MarketItem>>().await?;
-
-    Ok(market_items)
+    match response.body_json::<models::Response>().await? {
+        models::Response::Data { items_by_type } => Ok(items_by_type),
+        models::Response::Error {} => Err(FetchError::Graphql),
+    }
 }
