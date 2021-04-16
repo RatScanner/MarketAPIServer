@@ -7,6 +7,7 @@ Create `.env` file:
 ```
 DATABASE_URL=sqlite://./db.sqlite
 AUTH_KEY=MY_SECURE_KEY
+RUST_LOG=info,sqlx=error
 ```
 
 Install sqlx-cli:
