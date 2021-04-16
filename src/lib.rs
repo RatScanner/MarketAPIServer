@@ -28,7 +28,7 @@ pub async fn start() {
 }
 
 async fn run_migrations() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let mut conn = db::get_db_connection().await?;
+    let mut conn = db::get_connection().await?;
     sqlx::migrate!("./migrations").run(&mut conn).await?;
     Ok(())
 }

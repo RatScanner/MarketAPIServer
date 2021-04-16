@@ -16,7 +16,7 @@ pub async fn get_resource(req: tide::Request<StateHandle>) -> tide::Response {
             .unwrap();
         let key = key.trim();
 
-        let mut conn = db::get_db_connection().await.server_error()?;
+        let mut conn = db::get_connection().await.server_error()?;
 
         let resource = sqlx::query!("SELECT * FROM resource_ WHERE key = ?", key)
             .map(|record| models::Resource {
@@ -37,7 +37,7 @@ pub async fn get_resource(req: tide::Request<StateHandle>) -> tide::Response {
 
 pub async fn get_all_resources(_: tide::Request<StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        let mut conn = db::get_db_connection().await.server_error()?;
+        let mut conn = db::get_connection().await.server_error()?;
 
         let resources = sqlx::query!("SELECT * FROM resource_")
             .map(|record| models::Resource {
@@ -57,7 +57,7 @@ pub async fn get_all_resources(_: tide::Request<StateHandle>) -> tide::Response 
 
 pub async fn post_resource(mut req: tide::Request<StateHandle>) -> tide::Response {
     error::catch(|| async move {
-        let mut conn = db::get_db_connection().await.server_error()?;
+        let mut conn = db::get_connection().await.server_error()?;
 
         let post_resource = req.body_json::<models::Resource>().await.client_error()?;
         let post_resource = models::Resource {
@@ -94,7 +94,7 @@ pub async fn delete_resource(req: tide::Request<StateHandle>) -> tide::Response 
             .unwrap();
         let key = key.trim();
 
-        let mut conn = db::get_db_connection().await.server_error()?;
+        let mut conn = db::get_connection().await.server_error()?;
 
         sqlx::query!("DELETE FROM resource_ WHERE key = ?1", key)
             .execute(&mut conn)

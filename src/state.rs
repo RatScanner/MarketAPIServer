@@ -35,7 +35,7 @@ impl State {
         &self,
         languages: &[&str],
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let mut conn = db::get_db_connection().await?;
+        let mut conn = db::get_connection().await?;
 
         for lang in languages {
             self.update(&mut conn, lang).await?;

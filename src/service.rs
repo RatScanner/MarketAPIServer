@@ -53,7 +53,7 @@ async fn fetch_and_update(
     let items = crate::fetch::fetch().await?;
 
     // Write to db
-    let mut conn = db::get_db_connection().await?;
+    let mut conn = db::get_connection().await?;
     conn.transaction::<_, _, Box<dyn std::error::Error + Send + Sync + 'static>>(move |conn| {
         Box::pin(async move {
             for item in items {
