@@ -155,7 +155,7 @@
     function postResource(key, value) {
         return fetch(resUrl, {
             method: "post",
-            headers: { "x-auth-key": authKey },
+            headers: { "x-auth-key": authKey, 'Content-Type': 'application/json;charset=UTF-8' },
             body: JSON.stringify({
                 key: key,
                 value: value

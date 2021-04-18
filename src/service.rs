@@ -8,9 +8,11 @@ pub fn start(state: StateHandle) {
             let state = std::panic::AssertUnwindSafe(state.clone());
 
             let service_result = std::panic::catch_unwind(move || {
-                async_std::task::block_on(async move {
-                    run(state.0).await;
-                });
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(async move {
+                        run(state.0).await;
+                    });
             });
 
             // Restart service on crash
@@ -51,6 +53,7 @@ async fn fetch_and_update(
     // Fetch
     let timestamp_fallback = chrono::Utc::now().timestamp();
     let items = crate::fetch::fetch().await?;
+    log::info!("Fetched successfully");
 
     // Write to db
     let mut conn = db::get_connection().await?;

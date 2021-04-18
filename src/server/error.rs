@@ -1,28 +1,36 @@
-use tide::http::StatusCode;
+use warp::http::StatusCode;
 
-#[derive(Debug)]
-pub enum Error {
-    StatusCode(StatusCode),
-    // InternalServerError,
+#[derive(thiserror::Error, Debug)]
+#[error("Error {code}")]
+pub struct Error {
+    code: StatusCode,
+    #[source]
+    source: Option<Box<dyn std::error::Error + Send + Sync + 'static>>,
 }
 
-impl From<StatusCode> for Error {
-    fn from(s: StatusCode) -> Self {
-        Error::StatusCode(s)
+impl Error {
+    pub fn not_found() -> Self {
+        StatusCode::NOT_FOUND.into()
+    }
+
+    pub fn server_error() -> Self {
+        StatusCode::INTERNAL_SERVER_ERROR.into()
+    }
+
+    pub fn code(&self) -> StatusCode {
+        self.code
+    }
+
+    pub fn source(&self) -> Option<&(dyn std::error::Error + Send + Sync + 'static)> {
+        self.source.as_deref()
     }
 }
 
-pub async fn catch<F, Fut>(f: F) -> tide::Response
-where
-    F: FnOnce() -> Fut,
-    Fut: async_std::future::Future<Output = Result<tide::Response, Error>>,
-{
-    match f().await {
-        Ok(v) => v,
-        Err(e) => match e {
-            Error::StatusCode(code) => error_response(code, None),
-            // Error::InternalServerError => error_response(StatusCode::INTERNAL_SERVER_ERROR, None),
-        },
+impl warp::reject::Reject for Error {}
+
+impl From<StatusCode> for Error {
+    fn from(code: StatusCode) -> Self {
+        Error { code, source: None }
     }
 }
 
@@ -42,33 +50,14 @@ pub trait ResultExt: Sized {
 
 impl<T, E> ResultExt for Result<T, E>
 where
-    E: std::fmt::Debug,
+    E: std::error::Error + Send + Sync + 'static,
 {
     type Ok = T;
 
     fn status_code_error(self, code: StatusCode) -> Result<T, Error> {
-        self.map_err(|e| {
-            if code.is_server_error() {
-                log::error!("catched: {:?} -> {}", e, code);
-            }
-            Error::StatusCode(code)
+        self.map_err(|error| Error {
+            code,
+            source: Some(Box::new(error)),
         })
     }
-}
-
-pub fn error_response(code: StatusCode, reason: Option<&str>) -> tide::Response {
-    #[derive(Debug, serde::Serialize)]
-    struct ResBody<'a> {
-        code: u16,
-        message: Option<&'a str>,
-        reason: Option<&'a str>,
-    }
-
-    tide::Response::new(code.as_u16())
-        .body_json(&ResBody {
-            code: code.as_u16(),
-            message: code.canonical_reason(),
-            reason,
-        })
-        .unwrap()
 }
