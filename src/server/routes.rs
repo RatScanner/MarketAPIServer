@@ -52,17 +52,27 @@ fn resources() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
 }
 
 fn file() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    let get_file = warp::path!("file" / PercentDecoded)
+    let get_file = warp::path!(PercentDecoded)
         .and(warp::get())
         .and_then(endpoints::get_file);
 
-    let upload = warp::path!("upload" / PercentDecoded)
+    let get_all_files = warp::path::end()
+        .and(warp::get())
+        .and(middlewares::authenticate())
+        .and_then(endpoints::get_all_files);
+
+    let upload_file = warp::path!(PercentDecoded)
         .and(warp::put())
         .and(middlewares::authenticate())
         .and(warp::body::bytes())
-        .and_then(endpoints::upload);
+        .and_then(endpoints::upload_file);
 
-    get_file.or(upload)
+    let delete_file = warp::path!(PercentDecoded)
+        .and(warp::delete())
+        .and(middlewares::authenticate())
+        .and_then(endpoints::delete_file);
+
+    warp::path!("file" / ..).and(get_file.or(get_all_files).or(upload_file).or(delete_file))
 }
 
 fn items(state: &StateHandle) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {

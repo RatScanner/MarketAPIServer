@@ -87,7 +87,7 @@ pub async fn delete_resource(key: PercentDecoded) -> Result<impl Reply> {
     Ok(warp::reply::json(&serde_json::json!({})))
 }
 
-pub async fn upload(file_name: PercentDecoded, body: bytes::Bytes) -> Result<impl Reply> {
+pub async fn upload_file(file_name: PercentDecoded, body: bytes::Bytes) -> Result<impl Reply> {
     // File
     let file_name = file_name.as_ref().trim();
     let file_data = &*body;
@@ -130,6 +130,29 @@ pub async fn get_file(file_name: PercentDecoded) -> Result<impl Reply> {
         )
         .body(file_data)
         .unwrap())
+}
+
+pub async fn get_all_files() -> Result<impl Reply> {
+    let mut conn = db::get_connection().await.server_error()?;
+
+    let files = sqlx::query_scalar!("SELECT name FROM file_")
+        .fetch_all(&mut conn)
+        .await
+        .server_error()?;
+
+    Ok(warp::reply::json(&files))
+}
+
+pub async fn delete_file(file_name: PercentDecoded) -> Result<impl Reply> {
+    let file_name = file_name.as_ref().trim();
+    let mut conn = db::get_connection().await.server_error()?;
+
+    sqlx::query!("DELETE FROM file_ WHERE name = ?1", file_name)
+        .execute(&mut conn)
+        .await
+        .server_error()?;
+
+    Ok(warp::reply::json(&serde_json::json!({})))
 }
 
 #[derive(Debug, serde::Deserialize)]

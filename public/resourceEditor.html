@@ -33,12 +33,15 @@
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 400px;">
-                    <label class="button" style="margin-left: 0px;">
+                    <button onclick="btnGetAllFiles()" style="margin-left: 0px;">Get all</button>
+                    <button onclick="btnDownloadFile()">Download</button>
+                    <label class="button">
                         <input type="file" id="file" onchange="btnSelectFile()" style="display: none;"/>
                         Select File
                     </label>
                     <button onclick="btnUploadFile()">Upload</button>
-                    <button onclick="btnDownloadFile()" style="margin-right: 0px;">Download</button>
+                    <button onclick="btnDeleteFile()"
+                        style="margin-right: 0px; background-color: #e34d4d;">Delete</button>
                 </div>
             </div>
         </div>
@@ -96,11 +99,13 @@
 
         response = await deleteResource(key);
         showStatus(response.status);
-        if (response.status != 204) {
-            document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
-        } else {
-            document.getElementById("response").innerHTML = "";
-        }
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
+    }
+
+    async function btnGetAllFiles() {
+        response = await getAllFiles();
+        showStatus(response.status);
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
     }
 
     async function btnSelectFile() {
@@ -124,6 +129,13 @@
         response = await downloadFile(filename);
         showStatus(response.status);
         document.getElementById("response").innerHTML = "";
+    }
+
+    async function btnDeleteFile() {
+        let filename = document.getElementById("filename").value;
+        response = await deleteFile(filename);
+        showStatus(response.status);
+        document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
     }
 
     // --------------------------------------------------
@@ -167,19 +179,20 @@
         return fetch(resUrl + "/" + key, {
             method: "delete",
             headers: { "x-auth-key": authKey },
-        }).then(r => {
-            if (r.status != 204) {
-                return r.json().then(data => ({ status: r.status, json: data }));
-            } else {
-                return ({ status: r.status, json: "" });
-            }
-        })
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
+    }
+
+    function getAllFiles() {
+        return fetch(baseUrl + "/file", {
+            method: "get",
+            headers: { "x-auth-key": authKey },
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
     function uploadFile(filenname) {
         let file = document.getElementById("file").files[0];
 
-        return fetch(baseUrl + "/upload/" + filenname, {
+        return fetch(baseUrl + "/file/" + filenname, {
             method:'put',
             headers: { "x-auth-key": authKey },
             body: file
@@ -189,6 +202,13 @@
     function downloadFile(filenname) {
         let file = document.getElementById("file").files[0];
         window.open(baseUrl + "/file/" + filenname);
+    }
+
+    function deleteFile(filenname) {
+        return fetch(baseUrl + "/file/" + filenname, {
+            method: "delete",
+            headers: { "x-auth-key": authKey },
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
     // --------------------------------------------------
