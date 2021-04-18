@@ -197,35 +197,35 @@
         }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
-    function uploadFile(filenname) {
-        if (filenname.trim() === "") {
+    function uploadFile(filename) {
+        if (filename.trim() === "") {
             return { status: 400, json: "File name must not be empty" };
         }
 
         let file = document.getElementById("file").files[0];
 
-        return fetch(baseUrl + "/file/" + filenname, {
+        return fetch(baseUrl + "/file/" + filename, {
             method:'put',
             headers: { "x-auth-key": authKey },
             body: file
         }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
-    function downloadFile(filenname) {
-        if (filenname.trim() === "") {
+    function downloadFile(filename) {
+        if (filename.trim() === "") {
             return { status: 400, json: "File name must not be empty" };
         }
 
         let file = document.getElementById("file").files[0];
-        window.open(baseUrl + "/file/" + filenname);
+        window.open(baseUrl + "/file/" + filename);
     }
 
-    function deleteFile(filenname) {
-        if (filenname.trim() === "") {
+    function deleteFile(filename) {
+        if (filename.trim() === "") {
             return { status: 400, json: "File name must not be empty" };
         }
 
-        return fetch(baseUrl + "/file/" + filenname, {
+        return fetch(baseUrl + "/file/" + filename, {
             method: "delete",
             headers: { "x-auth-key": authKey },
         }).then(r => r.json().then(data => ({ status: r.status, json: data })))
