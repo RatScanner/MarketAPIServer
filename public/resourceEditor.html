@@ -1,7 +1,7 @@
 <html>
 
-<body bgcolor="#252525">
-    <div id="authentifacator" class="centered" style="display: flex; flex-direction: column;">
+<body style="background-color: #252525" onload="detectApiVersion()">
+    <div id="authentifacator" class="centered" style="display: flex; flex-direction: column; height: max-content;">
         <input id="authKey" type="password" placeholder="Authentification Key"></input>
         <button onclick="btnAuthentificate()" style="margin: 0px; margin-top: 5px;">Confirm</button>
     </div>
@@ -26,6 +26,8 @@
             <pre id="response"></pre>
         </div>
     </div>
+
+    <div id="snackbar"></div>
 </body>
 
 <script>
@@ -80,7 +82,16 @@
     }
 
     // --------------------------------------------------
-    let baseUrl = "http://" + window.location.host + "/res";
+    let baseUrl = "http://" +  window.location.host;
+    let resUrl = baseUrl + "/res";
+
+    function detectApiVersion() {
+        var version = window.location.pathname.split('/')[1];
+        if(version.toLowerCase().startsWith("v")) {
+            baseUrl = "http://" + window.location.host + "/" + version;
+        }
+        showSnackbar("API: " + baseUrl);
+    }
 
     function getAllResources() {
         return fetch(baseUrl, {
@@ -140,6 +151,12 @@
             return '<span class="' + cls + '">' + match + '</span>';
         });
     }
+    function showSnackbar(text) {
+        var snackbar = document.getElementById("snackbar");
+        snackbar.className = "show";
+        snackbar.innerHTML = text;
+        setTimeout(function(){ snackbar.className = snackbar.className.replace("show", ""); }, 3000);
+    }
 </script>
 
 <style>
@@ -182,6 +199,53 @@
     .string {
         color: steelblue
     }
-</style>
 
+    /* ------------------------------ Snackbar ------------------------------*/
+    /* The snackbar - position it at the bottom and in the middle of the screen */
+    #snackbar {
+        visibility: hidden; /* Hidden by default. Visible on click */
+        min-width: 250px; /* Set a default minimum width */
+        margin-left: -125px; /* Divide value of min-width by 2 */
+        background-color: #414141; /* Black background color */
+        border: none;
+        border-radius: 6px;
+        font-size: 18;
+        color: white; /* White text color */
+        text-align: center; /* Centered text */
+        padding: 16px; /* Padding */
+        position: fixed; /* Sit on top of the screen */
+        z-index: 1; /* Add a z-index if needed */
+        left: 50%; /* Center the snackbar */
+        bottom: 30px; /* 30px from the bottom */
+        box-shadow: 5px 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Show the snackbar when clicking on a button (class added with JavaScript) */
+    #snackbar.show {
+        visibility: visible; /* Show the snackbar */
+        -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    /* Animations to fade the snackbar in and out */
+    @-webkit-keyframes fadein {
+        from {bottom: 0; opacity: 0;}
+        to {bottom: 30px; opacity: 1;}
+    }
+
+    @keyframes fadein {
+        from {bottom: 0; opacity: 0;}
+        to {bottom: 30px; opacity: 1;}
+    }
+
+    @-webkit-keyframes fadeout {
+        from {bottom: 30px; opacity: 1;}
+        to {bottom: 0; opacity: 0;}
+    }
+
+    @keyframes fadeout {
+        from {bottom: 30px; opacity: 1;}
+        to {bottom: 0; opacity: 0;}
+    }
+</style>
 </html>
