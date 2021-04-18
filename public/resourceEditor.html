@@ -5,19 +5,41 @@
         <input id="authKey" type="password" placeholder="Authentification Key"></input>
         <button onclick="btnAuthentificate()" style="margin: 0px; margin-top: 5px;">Confirm</button>
     </div>
+
     <div id="editor" style="display: none;">
-        <div>
-            <div style="display: flex; flex-direction: column; justify-content: space-between; width: 400px;">
-                <input id="key" type="text" placeholder="Key" style="margin-bottom: 5px;"></input>
-                <input id="value" type="text" placeholder="Value" style="margin-bottom: 5px;"></input>
+        <div style="display: flex; flex-direction: row; justify-content: space-between; width: 400px;">
+            <div style="margin: 5px;">
+                <div style="display: flex; flex-direction: column; justify-content: space-between; width: 400px;">
+                    <input id="key" type="text" placeholder="Key" style="margin-bottom: 10px;"></input>
+                    <input id="value" type="text" placeholder="Value" style="margin-bottom: 10px;"></input>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; width: 400px;">
+                    <button onclick="btnGetAllResources()" style="margin-left: 0px;">Get all</button>
+                    <button onclick="btnGetResource()">Get</button>
+                    <button onclick="btnPostResource()">Post</button>
+                    <button onclick="btnDeleteResource()"
+                        style="margin-right: 0px; background-color: #e34d4d;">Delete</button>
+                </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; width: 400px; margin-top: 10px;">
-                <button onclick="btnGetAllResources()" style="margin-left: 0px;">Get all</button>
-                <button onclick="btnGetResource()">Get</button>
-                <button onclick="btnPostResource()">Post</button>
-                <button onclick="btnDeleteResource()"
-                    style="margin-right: 0px; background-color: #e34d4d;">Delete</button>
+            <div style="margin: 5px; margin-left: 50px; width: 400px;">
+                <div style="display: flex; flex-direction: column; justify-content: space-between; width: 400px;">
+                    <input id="filename" type="text" placeholder="Filename" style="margin-bottom: 5px;"></input>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; width: 400px;">
+                    <label id="fileLabel" class="label" style="margin: 5px 0px;">No file selected</label>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 400px;">
+                    <label class="button" style="margin-left: 0px;">
+                        <input type="file" id="file" onchange="btnSelectFile()" style="display: none;"/>
+                        Select File
+                    </label>
+                    <button onclick="btnUploadFile()">Upload</button>
+                    <button onclick="btnDownloadFile()" style="margin-right: 0px;">Download</button>
+                </div>
             </div>
         </div>
 
@@ -39,15 +61,15 @@
         response = await getAllResources();
         if (response.status == 200) {
             document.getElementById("authentifacator").style.display = "none";
-            document.getElementById("editor").style.display = "inline"
+            document.getElementById("editor").style.display = "inline";
         } else {
-            alert("Authentification failed.")
+            showStatus("Authentification failed.");
         }
     }
 
     async function btnGetAllResources() {
         response = await getAllResources();
-        document.getElementById("status").innerHTML = response.status;
+        showStatus(response.status);
         document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
     }
 
@@ -56,7 +78,7 @@
         if (key == "") key = "%20";
 
         response = await getResource(key);
-        document.getElementById("status").innerHTML = response.status;
+        showStatus(response.status);
         document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
     }
 
@@ -64,7 +86,7 @@
         let key = document.getElementById("key").value;
         let value = document.getElementById("value").value;
         response = await postResource(key, value);
-        document.getElementById("status").innerHTML = response.status;
+        showStatus(response.status);
         document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
     }
 
@@ -73,12 +95,35 @@
         if (key == "") key = "%20";
 
         response = await deleteResource(key);
-        document.getElementById("status").innerHTML = response.status;
+        showStatus(response.status);
         if (response.status != 204) {
             document.getElementById("response").innerHTML = syntaxHighlight(JSON.stringify(response.json, null, 4));
         } else {
             document.getElementById("response").innerHTML = "";
         }
+    }
+
+    async function btnSelectFile() {
+        let file = document.getElementById("file").files[0];
+        document.getElementById("fileLabel").innerHTML = file.name;
+    }
+
+    async function btnUploadFile() {
+        let filename = document.getElementById("filename").value;
+        response = await uploadFile(filename);
+        showStatus(response.status);
+        if(response.status == 200) {
+            document.getElementById("response").innerHTML = "";
+        } else {
+            document.getElementById("response").innerHTML = response.json;
+        }
+    }
+
+    async function btnDownloadFile() {
+        let filename = document.getElementById("filename").value;
+        response = await downloadFile(filename);
+        showStatus(response.status);
+        document.getElementById("response").innerHTML = "";
     }
 
     // --------------------------------------------------
@@ -94,21 +139,21 @@
     }
 
     function getAllResources() {
-        return fetch(baseUrl, {
+        return fetch(resUrl, {
             method: "get",
             headers: { "x-auth-key": authKey },
         }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
     function getResource(key) {
-        return fetch(baseUrl + "/" + key, {
+        return fetch(resUrl + "/" + key, {
             method: "get",
             headers: { "x-auth-key": authKey },
         }).then(r => r.json().then(data => ({ status: r.status, json: data })))
     }
 
     function postResource(key, value) {
-        return fetch(baseUrl, {
+        return fetch(resUrl, {
             method: "post",
             headers: { "x-auth-key": authKey },
             body: JSON.stringify({
@@ -119,7 +164,7 @@
     }
 
     function deleteResource(key) {
-        return fetch(baseUrl + "/" + key, {
+        return fetch(resUrl + "/" + key, {
             method: "delete",
             headers: { "x-auth-key": authKey },
         }).then(r => {
@@ -129,6 +174,21 @@
                 return ({ status: r.status, json: "" });
             }
         })
+    }
+
+    function uploadFile(filenname) {
+        let file = document.getElementById("file").files[0];
+
+        return fetch(baseUrl + "/upload/" + filenname, {
+            method:'put',
+            headers: { "x-auth-key": authKey },
+            body: file
+        }).then(r => r.json().then(data => ({ status: r.status, json: data })))
+    }
+
+    function downloadFile(filenname) {
+        let file = document.getElementById("file").files[0];
+        window.open(baseUrl + "/file/" + filenname);
     }
 
     // --------------------------------------------------
@@ -151,6 +211,14 @@
             return '<span class="' + cls + '">' + match + '</span>';
         });
     }
+
+    function showStatus(status) {
+        var statusLabel = document.getElementById("status");
+        statusLabel.innerHTML = status;
+
+        showSnackbar("Status Code: " + status);
+    }
+
     function showSnackbar(text) {
         var snackbar = document.getElementById("snackbar");
         snackbar.className = "show";
@@ -160,14 +228,19 @@
 </script>
 
 <style>
+    * {
+        font-family: Arial, Helvetica, sans-serif
+    }
+
     input {
         padding: 10px 16px;
         border: none;
         border-radius: 4px;
+        height: 38px;
         background-color: #f1f1f1;
     }
 
-    button {
+    .button, button {
         background-color: #4fbd54;
         border: none;
         border-radius: 4px;
@@ -180,6 +253,17 @@
         display: inline-block;
         font-size: 16px;
         flex-grow: 1;
+        cursor: pointer;
+    }
+
+    label {
+        color: white;
+        border: solid white 2px;
+        border-radius: 4px;
+        margin: 5px;
+        padding: 8px;
+        flex-grow: 1;
+        font-size: 16px;
     }
 
     .centered {
