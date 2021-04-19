@@ -26,11 +26,7 @@ jobs:
           toolchain: stable
 
       - name: Install sqlx-cli
-        uses: actions-rs/install@v0.1
-        with:
-          crate: sqlx-cli
-          version: latest
-          use-tool-cache: true
+        run: cargo install sqlx-cli --no-default-features --features sqlite
 
       - name: Setup database
         run: |
@@ -38,8 +34,7 @@ jobs:
           sqlx migrate run
 
       - name: Build
-        run: |
-          cargo build --release
+        run: cargo build --release
 
       - uses: marvinpinto/action-automatic-releases@latest
         with:
