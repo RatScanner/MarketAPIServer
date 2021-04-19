@@ -12,7 +12,7 @@ warp = "0.3.1"
 reqwest = { version = "0.11.3", features = ["json"] }
 
 # db
-sqlx = { version = "0.5.2", features = ["runtime-tokio-native-tls", "sqlite", "offline"] }
+sqlx = { version = "0.5.2", features = ["runtime-tokio-native-tls", "sqlite"] }
 
 # log
 log = "0.4.8"
