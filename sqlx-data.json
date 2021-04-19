@@ -1,0 +1,275 @@
+{
+  "db": "SQLite",
+  "0e262be276d75389d1f8dc282fc1d1db782866c421ba512880f3b9633018a0d6": {
+    "query": "\n                    SELECT * FROM trader_price_data_\n                    WHERE item_id = ?1 AND timestamp = ?2\n                    ORDER BY price ASC\n                    ",
+    "describe": {
+      "columns": [
+        {
+          "name": "item_id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "trader_id",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 2,
+          "type_info": "Int64"
+        },
+        {
+          "name": "price",
+          "ordinal": 3,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "2504d81e2df0f1db81a7f65a2b17b9a646503f616a0fa7eba1cd6843a1bf0d67": {
+    "query": "\n            INSERT INTO resource_ (key, value)\n            VALUES(?1, ?2)\n            ON CONFLICT(key)\n            DO UPDATE SET value = ?2\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "2ae1ffe2532515ba66a12d72f95f6e34d82c5d93820da944d4f3273122a42af1": {
+    "query": "SELECT data FROM file_ WHERE name = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "data",
+          "ordinal": 0,
+          "type_info": "Blob"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "3c27fc470935d78ff01e30d4d9ffbcf83d4a615fe473a5bf0e38710c71830bdf": {
+    "query": "\n            INSERT INTO file_ (name, data)\n            VALUES(?1, ?2)\n            ON CONFLICT(name)\n            DO UPDATE SET data = ?2\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "53894b1931226f07cd913ff182a038d664ac5971547e2183111d59e77a699d09": {
+    "query": "SELECT * FROM item_ ORDER BY id ASC",
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "icon_link",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "wiki_link",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "image_link",
+          "ordinal": 3,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "7a75ea300cb8c36cd34d8e5e856fcd2b8263865489b2cd7c1b034f76601f58e0": {
+    "query": "\n                    SELECT * FROM price_data_\n                    WHERE item_id = ?\n                    ORDER BY timestamp DESC\n                    ",
+    "describe": {
+      "columns": [
+        {
+          "name": "item_id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "timestamp",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "base_price",
+          "ordinal": 2,
+          "type_info": "Int64"
+        },
+        {
+          "name": "avg_24h_price",
+          "ordinal": 3,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "8bfb2647c4c80a8e08a0f43e4695e2ba05d0286eceec8da18f500780f52deb94": {
+    "query": "SELECT name FROM file_",
+    "describe": {
+      "columns": [
+        {
+          "name": "name",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "8c89f919d42cd9be8a9fcd5923af97949e1521379bdb790e6bcfa0e155b1595e": {
+    "query": "DELETE FROM resource_ WHERE key = ?1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "a3a4874ddb76d192e829f4102c351f9afe52b939b27b523e8efbd4646b8c717c": {
+    "query": "SELECT * FROM resource_",
+    "describe": {
+      "columns": [
+        {
+          "name": "key",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "value",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "b1b6b434f524c17bb6f895b8e5574af0fcf93dba4359b29070fe9be4a867973f": {
+    "query": "\n        INSERT INTO trader_price_data_ (item_id, trader_id, timestamp, price)\n        VALUES(?1, ?2, ?3, ?4)\n        ON CONFLICT(item_id, trader_id, timestamp) \n        DO UPDATE SET price = ?4\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 4
+      },
+      "nullable": []
+    }
+  },
+  "d618fb3a45979f22d985998d4158939af3a8a9927b479eabae16991e4d8259c0": {
+    "query": "\n        INSERT INTO trader_ (id, name)\n        VALUES(?1, ?2)\n        ON CONFLICT(id) \n        DO UPDATE SET name = ?2\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "d970464d67272e7638329fe32c5767fcc101b795401809460228a5866fc1da41": {
+    "query": "\n        INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)\n        VALUES(?1, ?2, ?3, ?4)\n        ON CONFLICT(item_id, timestamp) \n        DO UPDATE SET\n            base_price = ?3,\n            avg_24h_price = ?4\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 4
+      },
+      "nullable": []
+    }
+  },
+  "db06fd18d3d5a5316d5496af196c3a941ecac7482366789538e2fcfc5d79252e": {
+    "query": "DELETE FROM file_ WHERE name = ?1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "de85602a75998d6489021bb7b3dae33a6b201f6f2098b83752c2c52e76bbe429": {
+    "query": "\n        INSERT INTO item_ (id, icon_link, wiki_link, image_link)\n        VALUES(?1, ?2, ?3, ?4)\n        ON CONFLICT(id) \n        DO UPDATE SET\n            icon_link = ?2,\n            wiki_link = ?3,\n            image_link = ?4\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 4
+      },
+      "nullable": []
+    }
+  },
+  "e16c3e8d2025d3bf1b875ccfd5e4f2e05ff97b9bd616060949cb9d67281bf950": {
+    "query": "SELECT * FROM resource_ WHERE key = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "key",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "value",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  }
+}
