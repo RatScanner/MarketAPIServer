@@ -1,3 +1,7 @@
+[![Build Status](https://github.com/RatScanner/MarketAPIServer/workflows/test/badge.svg)](https://github.com/RatScanner/MarketAPIServer/actions)
+[![dependency status](https://deps.rs/repo/github/RatScanner/MarketAPIServer/status.svg)](https://deps.rs/repo/github/RatScanner/MarketAPIServer)
+[![Lines Of Code](https://tokei.rs/b1/github/RatScanner/MarketAPIServer?category=code)](https://github.com/RatScanner/MarketAPIServer)
+
 # Market API Server
 
 ## Setup
