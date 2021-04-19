@@ -27,6 +27,7 @@ jobs:
         with:
           crate: sqlx-cli
           version: latest
+          use-tool-cache: true
 
       - name: Setup database
         run: |
