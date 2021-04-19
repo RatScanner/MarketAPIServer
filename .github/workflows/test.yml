@@ -11,10 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Create env file
+        run: echo 'DATABASE_URL=sqlite://./db.sqlite' > ./.env
+
+      - name: Setup toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Install sqlx-cli
+        uses: actions-rs/install@v0.1
+        with:
+          crate: sqlx-cli
+          version: latest
+
+      - name: Setup database
+        run: |
+          sqlx database create
+          sqlx migrate run
+
       - name: Build
         run: cargo build --verbose
       - name: Run tests
