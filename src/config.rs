@@ -11,10 +11,14 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(database_url: String, auth_key: String, env: Environment) -> ConfigHandle {
+    pub fn new(
+        database_url: impl Into<String>,
+        auth_key: impl Into<String>,
+        env: Environment,
+    ) -> ConfigHandle {
         Arc::new(Self {
-            database_url,
-            auth_key,
+            database_url: database_url.into(),
+            auth_key: auth_key.into(),
             env,
             _private: (),
         })
