@@ -25,25 +25,28 @@ pub async fn start(conf: ConfigHandle) {
         }
     }
 
+    // Connect to database
+    let db = db::Db::connect(&conf.database_url).await.unwrap();
+
     // Run migrations
-    run_migrations(&conf).await.unwrap();
+    run_migrations(&db).await.unwrap();
 
     // Init state
     let state = state::State::new();
 
     // Start service
     if conf.service {
-        service::start(state.clone(), conf.clone());
+        service::start(state.clone(), db.clone());
     }
 
     // Start server
-    server::start(state, conf).await;
+    server::start(state, conf, db).await;
 }
 
 async fn run_migrations(
-    conf: &Config,
+    db: &db::Db,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let mut conn = db::get_connection(conf).await?;
+    let mut conn = db.conn().await?;
     sqlx::migrate!("./migrations").run(&mut conn).await?;
     Ok(())
 }

@@ -1,6 +1,23 @@
-use crate::Config;
-use sqlx::{Connection, Result, SqliteConnection};
+use sqlx::{
+    pool::{PoolConnection, PoolOptions},
+    Result, Sqlite, SqlitePool,
+};
 
-pub async fn get_connection(conf: &Config) -> Result<SqliteConnection> {
-    Ok(SqliteConnection::connect(&conf.database_url).await?)
+#[derive(Clone)]
+pub struct Db(SqlitePool);
+
+impl Db {
+    pub async fn connect(database_url: &str) -> Result<Self> {
+        Ok(Self(
+            PoolOptions::new()
+                .min_connections(1)
+                .max_connections(1)
+                .connect(database_url)
+                .await?,
+        ))
+    }
+
+    pub async fn conn(&self) -> Result<PoolConnection<Sqlite>> {
+        self.0.acquire().await
+    }
 }

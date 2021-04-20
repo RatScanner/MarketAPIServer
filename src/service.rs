@@ -1,18 +1,18 @@
 use super::state::{State, StateHandle};
-use crate::{db, Config, ConfigHandle};
+use crate::db::Db;
 use sqlx::{Connection, Sqlite, Transaction};
 
-pub fn start(state: StateHandle, conf: ConfigHandle) {
+pub fn start(state: StateHandle, db: Db) {
     std::thread::spawn(move || {
         loop {
             let state = std::panic::AssertUnwindSafe(state.clone());
-            let conf = conf.clone();
+            let db = std::panic::AssertUnwindSafe(db.clone());
 
             let service_result = std::panic::catch_unwind(move || {
                 tokio::runtime::Runtime::new()
                     .unwrap()
                     .block_on(async move {
-                        run(&state.0, &conf).await;
+                        run(&state.0, &db.0).await;
                     });
             });
 
@@ -25,17 +25,17 @@ pub fn start(state: StateHandle, conf: ConfigHandle) {
     });
 }
 
-async fn run(state: &State, conf: &Config) {
+async fn run(state: &State, db: &Db) {
     let languages = ["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
     let mut languages_cycle = languages.iter().cycle();
 
     loop {
         // Fetch and update
-        let res = fetch_and_update(languages_cycle.next().unwrap(), conf).await;
+        let res = fetch_and_update(languages_cycle.next().unwrap(), db).await;
 
         match res {
             Ok(_) => {
-                if let Err(e) = state.update_from_db(&languages, conf).await {
+                if let Err(e) = state.update_from_db(&languages, db).await {
                     log::error!("failed to update from db: {}", e);
                 }
                 std::thread::sleep(std::time::Duration::from_secs(60 * 10));
@@ -50,7 +50,7 @@ async fn run(state: &State, conf: &Config) {
 
 async fn fetch_and_update(
     _lang: &str,
-    conf: &Config,
+    db: &Db,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     // Fetch
     let timestamp_fallback = chrono::Utc::now().timestamp();
@@ -58,7 +58,7 @@ async fn fetch_and_update(
     log::info!("Fetched successfully");
 
     // Write to db
-    let mut conn = db::get_connection(conf).await?;
+    let mut conn = db.conn().await?;
     conn.transaction::<_, _, Box<dyn std::error::Error + Send + Sync + 'static>>(move |conn| {
         Box::pin(async move {
             for item in items {
