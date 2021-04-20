@@ -135,12 +135,12 @@
     }
 
     // --------------------------------------------------
-    let baseUrl = "http://" +  window.location.host;
+    let baseUrl = window.location.origin;
 
     function detectApiVersion() {
         var version = window.location.pathname.split('/')[1];
         if(version.toLowerCase().startsWith("v")) {
-            baseUrl = "http://" + window.location.host + "/" + version;
+            baseUrl = window.location.protocol + "//" + window.location.host + "/" + version;
         }
         showSnackbar("API: " + baseUrl);
     }
