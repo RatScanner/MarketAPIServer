@@ -9,7 +9,9 @@ mod state;
 
 pub use self::config::{Config, ConfigHandle};
 
-pub async fn start(conf: ConfigHandle) {
+pub async fn init(
+    conf: ConfigHandle,
+) -> impl warp::Filter<Extract = impl warp::Reply, Error = std::convert::Infallible> + Clone {
     // Enable logger
     match conf.env {
         config::Environment::Production => {
@@ -41,7 +43,12 @@ pub async fn start(conf: ConfigHandle) {
     }
 
     // Start server
-    server::start(state, conf, db).await;
+    server::init(state, conf, db).await
+}
+
+pub async fn start(conf: ConfigHandle) {
+    let app = init(conf).await;
+    warp::serve(app).run(([0, 0, 0, 0], 8081)).await;
 }
 
 async fn run_migrations(
