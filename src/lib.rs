@@ -17,12 +17,13 @@ pub async fn start(conf: ConfigHandle) {
                 .filter_level(log::LevelFilter::Warn)
                 .init();
         }
-        config::Environment::Development | config::Environment::Test => {
+        config::Environment::Development => {
             env_logger::builder()
                 .filter_level(log::LevelFilter::Info)
                 .filter_module("sqlx", log::LevelFilter::Error)
                 .init();
         }
+        config::Environment::Test => (),
     }
 
     // Connect to database
