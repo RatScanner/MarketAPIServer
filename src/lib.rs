@@ -7,7 +7,10 @@ mod server;
 mod service;
 mod state;
 
-pub use self::config::{Config, ConfigHandle};
+pub use self::{
+    config::{Config, ConfigHandle, Environment},
+    server::models,
+};
 
 pub async fn init(
     conf: ConfigHandle,
