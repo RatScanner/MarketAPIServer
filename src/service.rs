@@ -1,4 +1,4 @@
-use super::state::StateHandle;
+use super::state::{State, StateHandle};
 use crate::{db, Config, ConfigHandle};
 use sqlx::{Connection, Sqlite, Transaction};
 
@@ -12,7 +12,7 @@ pub fn start(state: StateHandle, conf: ConfigHandle) {
                 tokio::runtime::Runtime::new()
                     .unwrap()
                     .block_on(async move {
-                        run(state.0, conf).await;
+                        run(&state.0, &conf).await;
                     });
             });
 
@@ -25,17 +25,17 @@ pub fn start(state: StateHandle, conf: ConfigHandle) {
     });
 }
 
-async fn run(state: StateHandle, conf: ConfigHandle) {
+async fn run(state: &State, conf: &Config) {
     let languages = ["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
     let mut languages_cycle = languages.iter().cycle();
 
     loop {
         // Fetch and update
-        let res = fetch_and_update(languages_cycle.next().unwrap(), &conf).await;
+        let res = fetch_and_update(languages_cycle.next().unwrap(), conf).await;
 
         match res {
             Ok(_) => {
-                if let Err(e) = state.update_from_db(&languages, &conf).await {
+                if let Err(e) = state.update_from_db(&languages, conf).await {
                     log::error!("failed to update from db: {}", e);
                 }
                 std::thread::sleep(std::time::Duration::from_secs(60 * 10));

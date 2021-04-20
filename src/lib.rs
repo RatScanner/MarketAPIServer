@@ -29,7 +29,7 @@ pub async fn start(conf: ConfigHandle) {
     run_migrations(&conf).await.unwrap();
 
     // Init state
-    let state = state::StateHandle::new();
+    let state = state::State::new();
 
     // Start service
     service::start(state.clone(), conf.clone());

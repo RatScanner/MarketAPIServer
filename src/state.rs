@@ -1,29 +1,7 @@
 use crate::{db, server::models, Config};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct StateHandle {
-    inner: Arc<State>,
-}
-
-impl StateHandle {
-    pub fn new() -> Self {
-        Self {
-            inner: Arc::new(State {
-                market_items: Default::default(),
-                market_items_gzip: Default::default(),
-            }),
-        }
-    }
-}
-
-impl std::ops::Deref for StateHandle {
-    type Target = State;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.inner
-    }
-}
+pub type StateHandle = Arc<State>;
 
 pub struct State {
     market_items: dashmap::DashMap<String, Vec<models::Item>>,
@@ -31,6 +9,13 @@ pub struct State {
 }
 
 impl State {
+    pub fn new() -> StateHandle {
+        Arc::new(Self {
+            market_items: Default::default(),
+            market_items_gzip: Default::default(),
+        })
+    }
+
     pub async fn update_from_db(
         &self,
         languages: &[&str],
