@@ -3,7 +3,7 @@ use super::{
     models,
     util::PercentDecoded,
 };
-use crate::{db, state::StateHandle};
+use crate::{db, state::StateHandle, ConfigHandle};
 use warp::Reply;
 
 type Result<T> = std::result::Result<T, warp::Rejection>;
@@ -18,9 +18,9 @@ pub async fn get_resource_editor() -> Result<impl Reply> {
     Ok(warp::reply::html(data))
 }
 
-pub async fn get_resource(key: PercentDecoded) -> Result<impl Reply> {
+pub async fn get_resource(key: PercentDecoded, conf: ConfigHandle) -> Result<impl Reply> {
     let key = key.as_ref().trim();
-    let mut conn = db::get_connection().await.server_error()?;
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     let resource = sqlx::query!("SELECT * FROM resource_ WHERE key = ?", key)
         .map(|record| models::Resource {
@@ -35,8 +35,8 @@ pub async fn get_resource(key: PercentDecoded) -> Result<impl Reply> {
     Ok(warp::reply::json(&resource))
 }
 
-pub async fn get_all_resources() -> Result<impl Reply> {
-    let mut conn = db::get_connection().await.server_error()?;
+pub async fn get_all_resources(conf: ConfigHandle) -> Result<impl Reply> {
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     let resources = sqlx::query!("SELECT * FROM resource_")
         .map(|record| models::Resource {
@@ -50,8 +50,11 @@ pub async fn get_all_resources() -> Result<impl Reply> {
     Ok(warp::reply::json(&resources))
 }
 
-pub async fn post_resource(post_resource: models::Resource) -> Result<impl Reply> {
-    let mut conn = db::get_connection().await.server_error()?;
+pub async fn post_resource(
+    post_resource: models::Resource,
+    conf: ConfigHandle,
+) -> Result<impl Reply> {
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     let post_resource = models::Resource {
         key: post_resource.key.trim().to_string(),
@@ -75,9 +78,9 @@ pub async fn post_resource(post_resource: models::Resource) -> Result<impl Reply
     Ok(warp::reply::json(&post_resource))
 }
 
-pub async fn delete_resource(key: PercentDecoded) -> Result<impl Reply> {
+pub async fn delete_resource(key: PercentDecoded, conf: ConfigHandle) -> Result<impl Reply> {
     let key = key.as_ref().trim();
-    let mut conn = db::get_connection().await.server_error()?;
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     sqlx::query!("DELETE FROM resource_ WHERE key = ?1", key)
         .execute(&mut conn)
@@ -87,13 +90,17 @@ pub async fn delete_resource(key: PercentDecoded) -> Result<impl Reply> {
     Ok(warp::reply::json(&serde_json::json!({})))
 }
 
-pub async fn upload_file(file_name: PercentDecoded, body: bytes::Bytes) -> Result<impl Reply> {
+pub async fn upload_file(
+    file_name: PercentDecoded,
+    body: bytes::Bytes,
+    conf: ConfigHandle,
+) -> Result<impl Reply> {
     // File
     let file_name = file_name.as_ref().trim();
     let file_data = &*body;
 
     // Insert
-    let mut conn = db::get_connection().await.server_error()?;
+    let mut conn = db::get_connection(&conf).await.server_error()?;
     sqlx::query!(
         r#"
             INSERT INTO file_ (name, data)
@@ -111,12 +118,12 @@ pub async fn upload_file(file_name: PercentDecoded, body: bytes::Bytes) -> Resul
     Ok(warp::reply::json(&serde_json::json!({})))
 }
 
-pub async fn get_file(file_name: PercentDecoded) -> Result<impl Reply> {
+pub async fn get_file(file_name: PercentDecoded, conf: ConfigHandle) -> Result<impl Reply> {
     // File
     let file_name = file_name.as_ref().trim();
 
     // Query
-    let mut conn = db::get_connection().await.server_error()?;
+    let mut conn = db::get_connection(&conf).await.server_error()?;
     let file_data = sqlx::query_scalar!("SELECT data FROM file_ WHERE name = ?", file_name)
         .fetch_optional(&mut conn)
         .await
@@ -132,8 +139,8 @@ pub async fn get_file(file_name: PercentDecoded) -> Result<impl Reply> {
         .unwrap())
 }
 
-pub async fn get_all_files() -> Result<impl Reply> {
-    let mut conn = db::get_connection().await.server_error()?;
+pub async fn get_all_files(conf: ConfigHandle) -> Result<impl Reply> {
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     let files = sqlx::query_scalar!("SELECT name FROM file_")
         .fetch_all(&mut conn)
@@ -143,9 +150,9 @@ pub async fn get_all_files() -> Result<impl Reply> {
     Ok(warp::reply::json(&files))
 }
 
-pub async fn delete_file(file_name: PercentDecoded) -> Result<impl Reply> {
+pub async fn delete_file(file_name: PercentDecoded, conf: ConfigHandle) -> Result<impl Reply> {
     let file_name = file_name.as_ref().trim();
-    let mut conn = db::get_connection().await.server_error()?;
+    let mut conn = db::get_connection(&conf).await.server_error()?;
 
     sqlx::query!("DELETE FROM file_ WHERE name = ?1", file_name)
         .execute(&mut conn)

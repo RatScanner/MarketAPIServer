@@ -1,4 +1,4 @@
-use crate::{db, server::models};
+use crate::{db, server::models, Config};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -34,8 +34,9 @@ impl State {
     pub async fn update_from_db(
         &self,
         languages: &[&str],
+        conf: &Config,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let mut conn = db::get_connection().await?;
+        let mut conn = db::get_connection(conf).await?;
 
         for lang in languages {
             self.update(&mut conn, lang).await?;

@@ -1,7 +1,6 @@
+use crate::Config;
 use sqlx::{Connection, Result, SqliteConnection};
-use std::env;
 
-pub async fn get_connection() -> Result<SqliteConnection> {
-    let database_url = env::var("DATABASE_URL").expect("Could not find env DATABASE_URL");
-    Ok(SqliteConnection::connect(&database_url).await?)
+pub async fn get_connection(conf: &Config) -> Result<SqliteConnection> {
+    Ok(SqliteConnection::connect(&conf.database_url).await?)
 }

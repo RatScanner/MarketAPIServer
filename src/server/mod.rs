@@ -7,10 +7,10 @@ mod util;
 
 pub mod models;
 
-pub async fn start(state: crate::state::StateHandle) {
+pub async fn start(state: crate::state::StateHandle, conf: crate::ConfigHandle) {
     use warp::Filter;
 
-    let app = routes::routes(&state)
+    let app = routes::routes(&state, &conf)
         .recover(recover::recover)
         .with(warp::log("app"));
 

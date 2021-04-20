@@ -1,4 +1,10 @@
 #[tokio::main]
 async fn main() {
-    market_api_server::start().await;
+    // Load env
+    #[cfg(debug_assertions)]
+    dotenv::dotenv().ok();
+
+    // Load conf and start
+    let conf = market_api_server::Config::from_env();
+    market_api_server::start(conf).await;
 }
