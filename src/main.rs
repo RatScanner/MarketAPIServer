@@ -6,5 +6,5 @@ async fn main() {
 
     // Load conf and start
     let conf = market_api_server::Config::from_env();
-    market_api_server::start(conf).await;
+    market_api_server::start(conf, ([0, 0, 0, 0], 8081)).await;
 }

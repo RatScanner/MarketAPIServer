@@ -46,9 +46,9 @@ pub async fn init(
     server::init(state, conf, db).await
 }
 
-pub async fn start(conf: ConfigHandle) {
+pub async fn start(conf: ConfigHandle, addr: impl Into<std::net::SocketAddr>) {
     let app = init(conf).await;
-    warp::serve(app).run(([0, 0, 0, 0], 8081)).await;
+    warp::serve(app).run(addr).await;
 }
 
 async fn run_migrations(
