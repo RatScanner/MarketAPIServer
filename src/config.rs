@@ -6,6 +6,7 @@ pub type ConfigHandle = Arc<Config>;
 pub struct Config {
     pub database_url: String,
     pub auth_key: String,
+    pub service: bool,
     pub env: Environment,
     _private: (),
 }
@@ -14,11 +15,13 @@ impl Config {
     pub fn new(
         database_url: impl Into<String>,
         auth_key: impl Into<String>,
+        service: bool,
         env: Environment,
     ) -> ConfigHandle {
         Arc::new(Self {
             database_url: database_url.into(),
             auth_key: auth_key.into(),
+            service,
             env,
             _private: (),
         })
@@ -28,6 +31,7 @@ impl Config {
         Arc::new(Self {
             database_url: env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
             auth_key: env::var("AUTH_KEY").expect("Could not find env AUTH_KEY"),
+            service: true,
             env: match env::var("ENVIRONMENT")
                 .expect("Could not find env ENVIRONMENT")
                 .as_str()

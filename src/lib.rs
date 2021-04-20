@@ -32,7 +32,9 @@ pub async fn start(conf: ConfigHandle) {
     let state = state::State::new();
 
     // Start service
-    service::start(state.clone(), conf.clone());
+    if conf.service {
+        service::start(state.clone(), conf.clone());
+    }
 
     // Start server
     server::start(state, conf).await;
