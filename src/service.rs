@@ -38,11 +38,11 @@ async fn run(state: &State, db: &Db) {
                 if let Err(e) = state.update_from_db(&languages, db).await {
                     log::error!("failed to update from db: {}", e);
                 }
-                std::thread::sleep(std::time::Duration::from_secs(60 * 10));
+                tokio::time::sleep(tokio::time::Duration::from_secs(60 * 10)).await;
             }
             Err(e) => {
                 log::error!("failed to fetch and update: {}", e);
-                std::thread::sleep(std::time::Duration::from_secs(60));
+                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
             }
         }
     }
