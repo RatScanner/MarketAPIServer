@@ -65,7 +65,7 @@ async fn fetch_and_update(
                 // Calc timestamp
                 let timestamp = match &item.updated {
                     Some(_) => {
-                        // TODO: ...
+                        // TODO: Parse timestamp from item.updated
                         timestamp_fallback
                     }
                     None => timestamp_fallback,
