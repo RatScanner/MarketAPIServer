@@ -14,7 +14,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
-      - name: Cache
+      - name: Cache crate
         uses: actions/cache@v2
         with:
           path: |
@@ -22,6 +22,9 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo plugins
+        uses: actions/cache@v2
         with:
           path: ~/.cargo/bin/
           key: ${{ runner.os }}-cargo-plugins
