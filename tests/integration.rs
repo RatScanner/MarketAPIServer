@@ -7,6 +7,8 @@ use market_api_server::{models, start};
 async fn res() {
     let server = start(util::config(), ([0, 0, 0, 0], 8081));
     let client = async {
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
         reqwest::Client::new()
             .post("http://localhost:8081/res")
             .header("x-auth-key", "1234")
