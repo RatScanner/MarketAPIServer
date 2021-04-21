@@ -17,6 +17,21 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
+      - name: Cache crate
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo plugins
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/bin/
+          key: ${{ runner.os }}-cargo-plugins
+
       - name: Create env file
         run: echo 'DATABASE_URL=sqlite://./db.sqlite' > ./.env
 
@@ -26,7 +41,7 @@ jobs:
           toolchain: stable
 
       - name: Install sqlx-cli
-        run: cargo install sqlx-cli --no-default-features --features sqlite
+        run: which sqlx || cargo install sqlx-cli --no-default-features --features sqlite
 
       - name: Setup database
         run: |
