@@ -38,7 +38,7 @@ jobs:
           toolchain: stable
 
       - name: Install sqlx-cli
-        run: cargo install sqlx-cli --no-default-features --features sqlite
+        run: which sqlx || cargo install sqlx-cli --no-default-features --features sqlite
 
       - name: Setup database
         run: |
