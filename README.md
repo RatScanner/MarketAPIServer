@@ -10,8 +10,8 @@ Create `.env` file:
 
 ```
 DATABASE_URL=sqlite://./db.sqlite
-AUTH_KEY=MY_SECURE_KEY
-ENVIRONMENT=Development
+AUTH_KEY=<MY_SECURE_KEY>
+ENVIRONMENT=<Production|Development>
 ```
 
 Install sqlx-cli:
