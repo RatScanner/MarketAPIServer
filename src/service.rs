@@ -65,6 +65,7 @@ async fn fetch_and_update(
         })
     })
     .await?;
+    log::info!("Updated db successfully");
 
     Ok(())
 }
