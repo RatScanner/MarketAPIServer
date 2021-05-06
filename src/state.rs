@@ -1,6 +1,8 @@
 use crate::{db::Db, server::models};
 use std::sync::Arc;
 
+pub const LANGUAGES: &[&'static str] = &["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
+
 pub type StateHandle = Arc<State>;
 
 pub struct State {
@@ -18,12 +20,11 @@ impl State {
 
     pub async fn update_from_db(
         &self,
-        languages: &[&str],
         db: &Db,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         let mut conn = db.conn().await?;
 
-        for lang in languages {
+        for lang in LANGUAGES {
             self.update(&mut conn, lang).await?;
         }
 

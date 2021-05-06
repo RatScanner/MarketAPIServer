@@ -39,6 +39,9 @@ pub async fn init(
 
     // Init state
     let state = state::State::new();
+    if let Err(e) = state.update_from_db(&db).await {
+        log::error!("failed to update from db: {}", e);
+    }
 
     // Start service
     if conf.service {

@@ -1,4 +1,4 @@
-use super::state::{State, StateHandle};
+use super::state::{State, StateHandle, LANGUAGES};
 use crate::db::Db;
 use sqlx::{Connection, Sqlite, Transaction};
 
@@ -9,8 +9,7 @@ pub fn start(state: StateHandle, db: Db) {
 }
 
 async fn run(state: &State, db: &Db) {
-    let languages = ["en"]; // ["en", "ru", "de", "fr", "es", "cn"];
-    let mut languages_cycle = languages.iter().cycle();
+    let mut languages_cycle = LANGUAGES.iter().cycle();
 
     loop {
         // Fetch and update
@@ -18,7 +17,7 @@ async fn run(state: &State, db: &Db) {
 
         match res {
             Ok(_) => {
-                if let Err(e) = state.update_from_db(&languages, db).await {
+                if let Err(e) = state.update_from_db(db).await {
                     log::error!("failed to update from db: {}", e);
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(60 * 10)).await;
