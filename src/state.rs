@@ -67,11 +67,10 @@ impl State {
                 let trader_prices = sqlx::query!(
                     r#"
                     SELECT * FROM trader_price_data_
-                    WHERE item_id = ?1 AND timestamp = ?2
+                    WHERE item_id = ?1
                     ORDER BY price ASC
                     "#,
                     item.id,
-                    price_data.timestamp,
                 )
                 .map(|record| models::TraderPriceData {
                     trader_id: record.trader_id,
