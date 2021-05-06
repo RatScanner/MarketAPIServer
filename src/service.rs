@@ -101,19 +101,21 @@ async fn upsert_price_data(
     timestamp: i64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     // Do not upsert if item already exists with same base_price and avg_24h_price
-    // FIXME: Use SELECT EXISTS ( ... )
-    let row = sqlx::query!(
+    if sqlx::query_scalar!(
         r#"
-        SELECT * FROM price_data_
-        WHERE item_id = ?1 AND base_price = ?2 AND avg_24h_price = ?3
+        SELECT EXISTS (
+            SELECT * FROM price_data_
+            WHERE item_id = ?1 AND base_price = ?2 AND avg_24h_price = ?3
+        )
         "#,
         item.id,
         item.base_price,
         item.avg_24h_price,
     )
-    .fetch_optional(&mut *conn)
-    .await?;
-    if row.is_some() {
+    .fetch_one(&mut *conn)
+    .await?
+        == 1
+    {
         return Ok(());
     }
 
