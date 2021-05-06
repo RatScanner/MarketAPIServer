@@ -100,6 +100,24 @@ async fn upsert_price_data(
     item: &crate::fetch::models::Item,
     timestamp: i64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    // Do not upsert if item already exists with same base_price and avg_24h_price
+    // FIXME: Use SELECT EXISTS ( ... )
+    let row = sqlx::query!(
+        r#"
+        SELECT * FROM price_data_
+        WHERE item_id = ?1 AND base_price = ?2 AND avg_24h_price = ?3
+        "#,
+        item.id,
+        item.base_price,
+        item.avg_24h_price,
+    )
+    .fetch_optional(&mut *conn)
+    .await?;
+    if row.is_some() {
+        return Ok(());
+    }
+
+    // Upsert price_data
     sqlx::query!(
         r#"
         INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
