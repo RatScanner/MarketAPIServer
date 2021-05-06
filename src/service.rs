@@ -3,25 +3,8 @@ use crate::db::Db;
 use sqlx::{Connection, Sqlite, Transaction};
 
 pub fn start(state: StateHandle, db: Db) {
-    std::thread::spawn(move || {
-        loop {
-            let state = std::panic::AssertUnwindSafe(state.clone());
-            let db = std::panic::AssertUnwindSafe(db.clone());
-
-            let service_result = std::panic::catch_unwind(move || {
-                tokio::runtime::Runtime::new()
-                    .unwrap()
-                    .block_on(async move {
-                        run(&state.0, &db.0).await;
-                    });
-            });
-
-            // Restart service on crash
-            match service_result {
-                Ok(()) => break,
-                Err(_) => log::error!("Service crashed. Restarting ..."),
-            }
-        }
+    tokio::spawn(async move {
+        run(&state, &db).await;
     });
 }
 
