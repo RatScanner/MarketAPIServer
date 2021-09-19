@@ -11,7 +11,7 @@ impl Db {
         Ok(Self(
             PoolOptions::new()
                 .min_connections(1)
-                .max_connections(1)
+                .max_connections(10)
                 .connect(database_url)
                 .await?,
         ))
