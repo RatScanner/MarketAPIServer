@@ -122,20 +122,35 @@ async fn upsert_price_data(
         return Ok(());
     }
 
+    let flea_market_sell_for = item
+        .sell_for
+        .iter()
+        .find(|sell_for| sell_for.vendor.name == "Flea Market")
+        .map(|sell_for| sell_for.price)
+        .unwrap_or(0);
+
     // Upsert price_data
     sqlx::query!(
         r#"
-        INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
-        VALUES(?1, ?2, ?3, ?4)
+        INSERT INTO price_data_ (
+            item_id,
+            timestamp,
+            base_price,
+            avg_24h_price,
+            flea_market_sell_for
+        )
+        VALUES(?1, ?2, ?3, ?4, ?5)
         ON CONFLICT(item_id, timestamp) 
         DO UPDATE SET
             base_price = ?3,
-            avg_24h_price = ?4
+            avg_24h_price = ?4,
+            flea_market_sell_for = ?5
         "#,
         item.id,
         timestamp,
         item.base_price,
         item.avg_24h_price,
+        flea_market_sell_for,
     )
     .execute(conn)
     .await?;
