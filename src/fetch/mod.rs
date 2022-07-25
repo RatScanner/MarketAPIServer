@@ -14,7 +14,7 @@ pub enum FetchError {
 pub async fn fetch() -> Result<Vec<models::Item>, FetchError> {
     let uri = "https://api.tarkov.dev/graphql";
     let body = json!({
-        "query": "{itemsByType(type: any) {id,basePrice,updated,iconLink,wikiLink,imageLink,avg24hPrice,traderPrices { price,trader {id,name}}}}",
+        "query": "{items(type: any) {id,basePrice,updated,iconLink,wikiLink,imageLink,avg24hPrice,sellFor {price,vendor {name, ...on TraderOffer {trader {id, name}}}}}}",
     });
 
     let response = reqwest::Client::new()
@@ -25,7 +25,7 @@ pub async fn fetch() -> Result<Vec<models::Item>, FetchError> {
         .error_for_status()?;
 
     match response.json::<models::Response>().await? {
-        models::Response::Data { items_by_type } => Ok(items_by_type),
+        models::Response::Data { items } => Ok(items),
         models::Response::Error {} => Err(FetchError::Graphql),
     }
 }

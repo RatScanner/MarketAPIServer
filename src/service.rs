@@ -56,8 +56,11 @@ async fn fetch_and_update(
                 // Upsert ...
                 upsert_item(conn, &item).await?;
                 upsert_price_data(conn, &item, timestamp).await?;
-                for trader_price in &item.trader_prices {
-                    upsert_trader_price_data(conn, &item.id, trader_price).await?;
+                for sell_for in &item.sell_for {
+                    if let Some(trader) = &sell_for.vendor.trader {
+                        upsert_trader(conn, &trader).await?;
+                        upsert_trader_price_data(conn, &item.id, &sell_for.price, trader).await?;
+                    }
                 }
             }
 
@@ -143,20 +146,19 @@ async fn upsert_price_data(
 async fn upsert_trader_price_data(
     conn: &mut Transaction<'_, Sqlite>,
     item_id: &str,
-    trader_price: &crate::fetch::models::TraderPrice,
+    price: &i64,
+    trader: &crate::fetch::models::Trader,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    upsert_trader(conn, &trader_price.trader).await?;
-
     sqlx::query!(
         r#"
         INSERT INTO trader_price_data_ (item_id, trader_id, price)
         VALUES(?1, ?2, ?3)
-        ON CONFLICT(item_id, trader_id) 
+        ON CONFLICT(item_id, trader_id)
         DO UPDATE SET price = ?3
         "#,
         item_id,
-        trader_price.trader.id,
-        trader_price.price,
+        trader.id,
+        price,
     )
     .execute(conn)
     .await?;

@@ -2,8 +2,8 @@
 pub enum Response {
     #[serde(rename = "data")]
     Data {
-        #[serde(rename = "itemsByType")]
-        items_by_type: Vec<Item>,
+        #[serde(rename = "items")]
+        items: Vec<Item>,
     },
     #[serde(rename = "errors")]
     Error {},
@@ -23,14 +23,20 @@ pub struct Item {
     pub image_link: Option<String>,
     #[serde(rename = "avg24hPrice")]
     pub avg_24h_price: Option<i64>,
-    #[serde(rename = "traderPrices")]
-    pub trader_prices: Vec<TraderPrice>,
+    #[serde(rename = "sellFor")]
+    pub sell_for: Vec<SellFor>,
 }
 
 #[derive(Debug, serde::Deserialize)]
-pub struct TraderPrice {
+pub struct SellFor {
     pub price: i64,
-    pub trader: Trader,
+    pub vendor: Vendor,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Vendor {
+    pub name: String,
+    pub trader: Option<Trader>,
 }
 
 #[derive(Debug, serde::Deserialize)]
