@@ -31,6 +31,8 @@ pub struct PriceData {
     pub avg_24h_price: Option<i64>,
     #[serde(rename = "fleaSellFor")]
     pub flea_sell_for: Option<i64>,
+    #[serde(rename = "fleaFee")]
+    pub flea_fee: i64,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

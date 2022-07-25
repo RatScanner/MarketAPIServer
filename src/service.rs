@@ -137,20 +137,23 @@ async fn upsert_price_data(
             timestamp,
             base_price,
             avg_24h_price,
-            flea_market_sell_for
+            flea_market_sell_for,
+            flea_market_fee
         )
-        VALUES(?1, ?2, ?3, ?4, ?5)
+        VALUES(?1, ?2, ?3, ?4, ?5, ?6)
         ON CONFLICT(item_id, timestamp) 
         DO UPDATE SET
             base_price = ?3,
             avg_24h_price = ?4,
-            flea_market_sell_for = ?5
+            flea_market_sell_for = ?5,
+            flea_market_fee = ?6
         "#,
         item.id,
         timestamp,
         item.base_price,
         item.avg_24h_price,
         flea_market_sell_for,
+        item.flea_market_fee
     )
     .execute(conn)
     .await?;

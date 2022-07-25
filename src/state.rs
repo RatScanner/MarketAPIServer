@@ -56,6 +56,7 @@ impl State {
                     base_price: record.base_price,
                     avg_24h_price: record.avg_24h_price,
                     flea_sell_for: record.flea_market_sell_for,
+                    flea_fee: record.flea_market_fee.unwrap_or(0),
                 })
                 .fetch_optional(&mut *conn)
                 .await?;
