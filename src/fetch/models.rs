@@ -23,8 +23,6 @@ pub struct Item {
     pub image_link: Option<String>,
     #[serde(rename = "avg24hPrice")]
     pub avg_24h_price: Option<i64>,
-    #[serde(rename = "fleaMarketFee")]
-    pub flea_market_fee: Option<i64>,
     #[serde(rename = "sellFor")]
     pub sell_for: Vec<SellFor>,
 }
