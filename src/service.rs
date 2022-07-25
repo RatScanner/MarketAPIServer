@@ -125,17 +125,25 @@ async fn upsert_price_data(
     // Upsert price_data
     sqlx::query!(
         r#"
-        INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
-        VALUES(?1, ?2, ?3, ?4)
+        INSERT INTO price_data_ (
+            item_id,
+            timestamp,
+            base_price,
+            avg_24h_price,
+            last_low_price
+        )
+        VALUES(?1, ?2, ?3, ?4, ?5)
         ON CONFLICT(item_id, timestamp) 
         DO UPDATE SET
             base_price = ?3,
-            avg_24h_price = ?4
+            avg_24h_price = ?4,
+            last_low_price = ?5
         "#,
         item.id,
         timestamp,
         item.base_price,
         item.avg_24h_price,
+        item.last_low_price,
     )
     .execute(conn)
     .await?;
