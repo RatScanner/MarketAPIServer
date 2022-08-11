@@ -119,6 +119,11 @@ async fn upsert_price_data(
         return Ok(());
     }
 
+    let avg_24h_price = match item.avg_24h_price {
+        Some(price) => price,
+        None => 0,
+    };
+
     // Upsert price_data
     sqlx::query!(
         r#"
@@ -132,7 +137,7 @@ async fn upsert_price_data(
         item.id,
         timestamp,
         item.base_price,
-        item.avg_24h_price,
+        avg_24h_price,
     )
     .execute(conn)
     .await?;
