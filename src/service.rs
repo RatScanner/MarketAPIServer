@@ -1,6 +1,6 @@
 use super::state::{State, StateHandle, LANGUAGES};
 use crate::db::Db;
-use sqlx::{Connection, Sqlite, Transaction};
+use sqlx::{Connection, Postgres, Transaction};
 
 pub fn start(state: StateHandle, db: Db) {
     tokio::spawn(async move {
@@ -71,18 +71,18 @@ async fn fetch_and_update(
 }
 
 async fn upsert_item(
-    conn: &mut Transaction<'_, Sqlite>,
+    conn: &mut Transaction<'_, Postgres>,
     item: &crate::fetch::models::Item,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     sqlx::query!(
         r#"
         INSERT INTO item_ (id, icon_link, wiki_link, image_link)
-        VALUES(?1, ?2, ?3, ?4)
+        VALUES($1, $2, $3, $4)
         ON CONFLICT(id) 
         DO UPDATE SET
-            icon_link = ?2,
-            wiki_link = ?3,
-            image_link = ?4
+            icon_link = $2,
+            wiki_link = $3,
+            image_link = $4
         "#,
         item.id,
         item.icon_link,
@@ -96,7 +96,7 @@ async fn upsert_item(
 }
 
 async fn upsert_price_data(
-    conn: &mut Transaction<'_, Sqlite>,
+    conn: &mut Transaction<'_, Postgres>,
     item: &crate::fetch::models::Item,
     timestamp: i64,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
@@ -105,7 +105,7 @@ async fn upsert_price_data(
         r#"
         SELECT EXISTS (
             SELECT * FROM price_data_
-            WHERE item_id = ?1 AND base_price = ?2 AND avg_24h_price = ?3
+            WHERE item_id = $1 AND base_price = $2 AND avg_24h_price = $3
         )
         "#,
         item.id,
@@ -114,7 +114,7 @@ async fn upsert_price_data(
     )
     .fetch_one(&mut *conn)
     .await?
-        == 1
+    .unwrap_or(false)
     {
         return Ok(());
     }
@@ -128,11 +128,11 @@ async fn upsert_price_data(
     sqlx::query!(
         r#"
         INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
-        VALUES(?1, ?2, ?3, ?4)
+        VALUES($1, $2, $3, $4)
         ON CONFLICT(item_id, timestamp) 
         DO UPDATE SET
-            base_price = ?3,
-            avg_24h_price = ?4
+            base_price = $3,
+            avg_24h_price = $4
         "#,
         item.id,
         timestamp,
@@ -146,7 +146,7 @@ async fn upsert_price_data(
 }
 
 async fn upsert_trader_price_data(
-    conn: &mut Transaction<'_, Sqlite>,
+    conn: &mut Transaction<'_, Postgres>,
     item_id: &str,
     trader_price: &crate::fetch::models::TraderPrice,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
@@ -155,9 +155,9 @@ async fn upsert_trader_price_data(
     sqlx::query!(
         r#"
         INSERT INTO trader_price_data_ (item_id, trader_id, price)
-        VALUES(?1, ?2, ?3)
+        VALUES($1, $2, $3)
         ON CONFLICT(item_id, trader_id) 
-        DO UPDATE SET price = ?3
+        DO UPDATE SET price = $3
         "#,
         item_id,
         trader_price.trader.id,
@@ -170,15 +170,15 @@ async fn upsert_trader_price_data(
 }
 
 async fn upsert_trader(
-    conn: &mut Transaction<'_, Sqlite>,
+    conn: &mut Transaction<'_, Postgres>,
     trader: &crate::fetch::models::Trader,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     sqlx::query!(
         r#"
         INSERT INTO trader_ (id, name)
-        VALUES(?1, ?2)
+        VALUES($1, $2)
         ON CONFLICT(id) 
-        DO UPDATE SET name = ?2
+        DO UPDATE SET name = $2
         "#,
         trader.id,
         trader.name,

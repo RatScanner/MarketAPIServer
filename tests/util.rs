@@ -1,9 +1,18 @@
 use bytes::Bytes;
 use market_api_server::{Config, ConfigHandle, Environment};
+use std::env;
 use warp::http::Response;
 
 pub fn config() -> ConfigHandle {
-    Config::new(":memory:", "1234", false, Environment::Test)
+    // Load env
+    dotenv::dotenv().ok();
+
+    Config::new(
+        env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
+        "1234",
+        false,
+        Environment::Test,
+    )
 }
 
 pub trait ResponseExt {

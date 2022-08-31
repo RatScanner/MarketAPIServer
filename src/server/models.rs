@@ -28,7 +28,7 @@ pub struct PriceData {
     #[serde(rename = "basePrice")]
     pub base_price: i64,
     #[serde(rename = "avg24hPrice")]
-    pub avg_24h_price: Option<i64>,
+    pub avg_24h_price: i64,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
