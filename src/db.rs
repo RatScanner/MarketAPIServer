@@ -1,10 +1,10 @@
 use sqlx::{
     pool::{PoolConnection, PoolOptions},
-    Result, Sqlite, SqlitePool,
+    PgPool, Postgres, Result,
 };
 
 #[derive(Clone)]
-pub struct Db(SqlitePool);
+pub struct Db(PgPool);
 
 impl Db {
     pub async fn connect(database_url: &str) -> Result<Self> {
@@ -17,7 +17,7 @@ impl Db {
         ))
     }
 
-    pub async fn conn(&self) -> Result<PoolConnection<Sqlite>> {
+    pub async fn conn(&self) -> Result<PoolConnection<Postgres>> {
         self.0.acquire().await
     }
 }

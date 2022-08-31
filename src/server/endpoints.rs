@@ -22,7 +22,7 @@ pub async fn get_resource(key: PercentDecoded, db: Db) -> Result<impl Reply> {
     let key = key.as_ref().trim();
     let mut conn = db.conn().await.server_error()?;
 
-    let resource = sqlx::query!("SELECT * FROM resource_ WHERE key = ?", key)
+    let resource = sqlx::query!("SELECT * FROM resource_ WHERE key = $1", key)
         .map(|record| models::Resource {
             key: record.key,
             value: record.value,
@@ -61,9 +61,9 @@ pub async fn post_resource(post_resource: models::Resource, db: Db) -> Result<im
     sqlx::query!(
         r#"
             INSERT INTO resource_ (key, value)
-            VALUES(?1, ?2)
+            VALUES($1, $2)
             ON CONFLICT(key)
-            DO UPDATE SET value = ?2
+            DO UPDATE SET value = $2
             "#,
         post_resource.key,
         post_resource.value,
@@ -79,7 +79,7 @@ pub async fn delete_resource(key: PercentDecoded, db: Db) -> Result<impl Reply> 
     let key = key.as_ref().trim();
     let mut conn = db.conn().await.server_error()?;
 
-    sqlx::query!("DELETE FROM resource_ WHERE key = ?1", key)
+    sqlx::query!("DELETE FROM resource_ WHERE key = $1", key)
         .execute(&mut conn)
         .await
         .server_error()?;
@@ -101,9 +101,9 @@ pub async fn upload_file(
     sqlx::query!(
         r#"
             INSERT INTO file_ (name, data)
-            VALUES(?1, ?2)
+            VALUES($1, $2)
             ON CONFLICT(name)
-            DO UPDATE SET data = ?2
+            DO UPDATE SET data = $2
             "#,
         file_name,
         file_data,
@@ -121,7 +121,7 @@ pub async fn get_file(file_name: PercentDecoded, db: Db) -> Result<impl Reply> {
 
     // Query
     let mut conn = db.conn().await.server_error()?;
-    let file_data = sqlx::query_scalar!("SELECT data FROM file_ WHERE name = ?", file_name)
+    let file_data = sqlx::query_scalar!("SELECT data FROM file_ WHERE name = $1", file_name)
         .fetch_optional(&mut conn)
         .await
         .server_error()?
@@ -151,7 +151,7 @@ pub async fn delete_file(file_name: PercentDecoded, db: Db) -> Result<impl Reply
     let file_name = file_name.as_ref().trim();
     let mut conn = db.conn().await.server_error()?;
 
-    sqlx::query!("DELETE FROM file_ WHERE name = ?1", file_name)
+    sqlx::query!("DELETE FROM file_ WHERE name = $1", file_name)
         .execute(&mut conn)
         .await
         .server_error()?;

@@ -31,7 +31,11 @@ impl Config {
         Arc::new(Self {
             database_url: env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
             auth_key: env::var("AUTH_KEY").expect("Could not find env AUTH_KEY"),
-            service: true,
+            service: match env::var("SERVICE").ok().as_deref() {
+                Some("true") | Some("TRUE") | None => true,
+                Some("false") | Some("FALSE") => false,
+                Some(env) => panic!("Invalid value for SERVICE: {}", env),
+            },
             env: match env::var("ENVIRONMENT")
                 .expect("Could not find env ENVIRONMENT")
                 .as_str()

@@ -9,15 +9,16 @@
 Create `.env` file:
 
 ```
-DATABASE_URL=sqlite://./db.sqlite
+DATABASE_URL=postgresql://<DB_USER>:<DB_USER_PASSWORD>@localhost/<DB_NAME>
 AUTH_KEY=<MY_SECURE_KEY>
 ENVIRONMENT=<Production|Development>
+# SERVICE=false <-- Disable fetch service, enabled by default
 ```
 
 Install sqlx-cli:
 
 ```
-cargo install sqlx-cli --no-default-features --features sqlite
+cargo install sqlx-cli --no-default-features --features native-tls,postgres
 ```
 
 Create database and run migrations:

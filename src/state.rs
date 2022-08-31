@@ -33,7 +33,7 @@ impl State {
 
     async fn update(
         &self,
-        conn: &mut sqlx::SqliteConnection,
+        conn: &mut sqlx::PgConnection,
         lang: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         let items = {
@@ -46,7 +46,7 @@ impl State {
                 let price_data = sqlx::query!(
                     r#"
                     SELECT * FROM price_data_
-                    WHERE item_id = ?
+                    WHERE item_id = $1
                     ORDER BY timestamp DESC
                     "#,
                     item.id
@@ -67,7 +67,7 @@ impl State {
                 let trader_prices = sqlx::query!(
                     r#"
                     SELECT * FROM trader_price_data_
-                    WHERE item_id = ?1
+                    WHERE item_id = $1
                     ORDER BY price ASC
                     "#,
                     item.id,
