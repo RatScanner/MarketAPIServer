@@ -9,6 +9,7 @@
 Create `.env` file:
 
 ```
+PORT=<PORT, e.g. 8081>
 DATABASE_URL=postgresql://<DB_USER>:<DB_USER_PASSWORD>@localhost/<DB_NAME>
 AUTH_KEY=<MY_SECURE_KEY>
 ENVIRONMENT=<Production|Development>

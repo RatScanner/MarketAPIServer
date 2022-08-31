@@ -8,6 +8,7 @@ pub fn config() -> ConfigHandle {
     dotenv::dotenv().ok();
 
     Config::new(
+        8081,
         env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
         "1234",
         false,

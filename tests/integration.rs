@@ -5,7 +5,7 @@ use market_api_server::{models, start};
 #[tokio::test(flavor = "multi_thread")]
 #[serial_test::serial]
 async fn res() {
-    let server = start(util::config(), ([0, 0, 0, 0], 8081));
+    let server = start(util::config(), [0, 0, 0, 0]);
     let client = async {
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 

@@ -52,9 +52,10 @@ pub async fn init(
     server::init(state, conf, db).await
 }
 
-pub async fn start(conf: ConfigHandle, addr: impl Into<std::net::SocketAddr>) {
+pub async fn start(conf: ConfigHandle, addr: impl Into<std::net::IpAddr>) {
+    let port = conf.port;
     let app = init(conf).await;
-    warp::serve(app).run(addr).await;
+    warp::serve(app).run((addr.into(), port)).await;
 }
 
 async fn run_migrations(

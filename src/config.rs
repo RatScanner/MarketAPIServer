@@ -4,6 +4,7 @@ use std::sync::Arc;
 pub type ConfigHandle = Arc<Config>;
 
 pub struct Config {
+    pub port: u16,
     pub database_url: String,
     pub auth_key: String,
     pub service: bool,
@@ -13,12 +14,14 @@ pub struct Config {
 
 impl Config {
     pub fn new(
+        port: u16,
         database_url: impl Into<String>,
         auth_key: impl Into<String>,
         service: bool,
         env: Environment,
     ) -> ConfigHandle {
         Arc::new(Self {
+            port,
             database_url: database_url.into(),
             auth_key: auth_key.into(),
             service,
@@ -29,6 +32,10 @@ impl Config {
 
     pub fn from_env() -> ConfigHandle {
         Arc::new(Self {
+            port: env::var("PORT")
+                .expect("Could not find env PORT")
+                .parse()
+                .expect("Invalid value for PORT"),
             database_url: env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
             auth_key: env::var("AUTH_KEY").expect("Could not find env AUTH_KEY"),
             service: match env::var("SERVICE").ok().as_deref() {
