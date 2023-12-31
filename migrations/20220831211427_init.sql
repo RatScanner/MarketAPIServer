@@ -20,6 +20,8 @@ CREATE TABLE price_data_ (
   timestamp     BIGINT NOT NULL,
 
   base_price    BIGINT NOT NULL,
+  last_low_price BIGINT NOT NULL,
+  low_24h_price BIGINT NOT NULL,
   avg_24h_price BIGINT NOT NULL,
 
   PRIMARY KEY (item_id, timestamp)
