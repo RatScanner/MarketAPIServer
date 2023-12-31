@@ -54,6 +54,8 @@ impl State {
                 .map(|record| models::PriceData {
                     timestamp: record.timestamp,
                     base_price: record.base_price,
+                    last_low_price: record.last_low_price,
+                    low_24h_price: record.low_24h_price,
                     avg_24h_price: record.avg_24h_price,
                 })
                 .fetch_optional(&mut *conn)
