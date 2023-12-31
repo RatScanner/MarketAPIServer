@@ -27,6 +27,10 @@ pub struct PriceData {
     pub timestamp: i64,
     #[serde(rename = "basePrice")]
     pub base_price: i64,
+    #[serde(rename = "lastLowPrice")]
+    pub last_low_price: i64,
+    #[serde(rename = "low24hPrice")]
+    pub low_24h_price: i64,
     #[serde(rename = "avg24hPrice")]
     pub avg_24h_price: i64,
 }

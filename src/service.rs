@@ -119,6 +119,16 @@ async fn upsert_price_data(
         return Ok(());
     }
 
+    let last_low_price = match item.last_low_price {
+        Some(price) => price,
+        None => 0,
+    };
+
+    let low_24h_price = match item.low_24h_price {
+        Some(price) => price,
+        None => 0,
+    };
+
     let avg_24h_price = match item.avg_24h_price {
         Some(price) => price,
         None => 0,
@@ -127,16 +137,20 @@ async fn upsert_price_data(
     // Upsert price_data
     sqlx::query!(
         r#"
-        INSERT INTO price_data_ (item_id, timestamp, base_price, avg_24h_price)
-        VALUES($1, $2, $3, $4)
+        INSERT INTO price_data_ (item_id, timestamp, base_price, last_low_price, low_24h_price, avg_24h_price)
+        VALUES($1, $2, $3, $4, $5, $6)
         ON CONFLICT(item_id, timestamp) 
         DO UPDATE SET
             base_price = $3,
-            avg_24h_price = $4
+            last_low_price = $4,
+            low_24h_price = $5,
+            avg_24h_price = $6
         "#,
         item.id,
         timestamp,
         item.base_price,
+        last_low_price,
+        low_24h_price,
         avg_24h_price,
     )
     .execute(conn)

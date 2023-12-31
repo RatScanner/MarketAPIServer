@@ -21,6 +21,10 @@ pub struct Item {
     pub wiki_link: Option<String>,
     #[serde(rename = "imageLink")]
     pub image_link: Option<String>,
+    #[serde(rename = "lastLowPrice")]
+    pub last_low_price: Option<i64>,
+    #[serde(rename = "low24hPrice")]
+    pub low_24h_price: Option<i64>,
     #[serde(rename = "avg24hPrice")]
     pub avg_24h_price: Option<i64>,
     #[serde(rename = "traderPrices")]
