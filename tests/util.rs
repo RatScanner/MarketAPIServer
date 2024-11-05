@@ -11,7 +11,9 @@ pub fn config() -> ConfigHandle {
         8081,
         env::var("DATABASE_URL").expect("Could not find env DATABASE_URL"),
         "1234",
-        false,
+        env::var("OAUTH_CLIENT_ID_DISCORD").expect("Could not find env DATABASE_URL"),
+        env::var("OAUTH_CLIENT_SECRET_DISCORD").expect("Could not find env DATABASE_URL"),
+        env::var("OAUTH_CLIENT_TOKEN_ENDPOINT_DISCORD").expect("Could not find env DATABASE_URL"),
         Environment::Test,
     )
 }

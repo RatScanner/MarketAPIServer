@@ -1,6 +1,6 @@
 mod util;
 
-use market_api_server::{init, models};
+use market_api_server::{init, server::models};
 use std::collections::HashSet;
 use util::ResponseExt;
 

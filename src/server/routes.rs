@@ -1,9 +1,8 @@
-use super::{endpoints, middlewares, util::PercentDecoded};
-use crate::{db::Db, state::StateHandle, ConfigHandle};
+use super::{endpoints, middlewares, models, util::PercentDecoded};
+use crate::{db::Db, ConfigHandle};
 use warp::{Filter, Rejection, Reply};
 
 pub fn routes(
-    state: &StateHandle,
     conf: &ConfigHandle,
     db: &Db,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -11,7 +10,7 @@ pub fn routes(
         .or(resource_editor())
         .or(resources(conf, db))
         .or(file(conf, db))
-        .or(items(state))
+        .or(oauth_refresh(conf))
 }
 
 fn index() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
@@ -93,24 +92,25 @@ fn file(
     warp::path!("file" / ..).and(get_file.or(get_all_files).or(upload_file).or(delete_file))
 }
 
-fn items(state: &StateHandle) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    warp::path!("all")
-        .and(warp::get())
-        .and(warp::query())
-        .and(with_state(state))
-        .and_then(endpoints::get_all_items)
-}
-
-fn with_state(
-    state: &StateHandle,
-) -> impl Filter<Extract = (StateHandle,), Error = std::convert::Infallible> + Clone {
-    let state = state.clone();
-    warp::any().map(move || state.clone())
+fn oauth_refresh(
+    conf: &ConfigHandle,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path!("oauth" / "refresh" / ..)
+        .and(warp::post())
+        .and(with_conf(conf.clone()))
+        .and(warp::body::json())
+        .and_then(endpoints::post_oauth_refresh)
 }
 
 fn with_db(db: &Db) -> impl Filter<Extract = (Db,), Error = std::convert::Infallible> + Clone {
     let db = db.clone();
     warp::any().map(move || db.clone())
+}
+
+fn with_conf(
+    conf: ConfigHandle,
+) -> impl Filter<Extract = (ConfigHandle,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || conf.clone())
 }
 
 fn with_auth(conf: &ConfigHandle) -> impl Filter<Extract = (), Error = Rejection> + Clone {

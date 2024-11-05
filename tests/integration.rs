@@ -1,6 +1,6 @@
 mod util;
 
-use market_api_server::{models, start};
+use market_api_server::{server::models, start};
 
 #[tokio::test(flavor = "multi_thread")]
 #[serial_test::serial]

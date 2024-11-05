@@ -3,7 +3,9 @@ use super::{
     models,
     util::PercentDecoded,
 };
-use crate::{db::Db, state::StateHandle};
+use crate::{db::Db, ConfigHandle};
+use reqwest::StatusCode;
+use serde_json::json;
 use warp::Reply;
 
 type Result<T> = std::result::Result<T, warp::Rejection>;
@@ -159,25 +161,35 @@ pub async fn delete_file(file_name: PercentDecoded, db: Db) -> Result<impl Reply
     Ok(warp::reply::json(&serde_json::json!({})))
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct GetAllItemsReqQuery {
-    lang: Option<String>,
-}
+pub async fn post_oauth_refresh(
+    conf: ConfigHandle,
+    data: models::OAuthRefreshData,
+) -> Result<impl Reply> {
+    if data.client_id != conf.oauth_client_id_discord {
+        return Err(Error::from(StatusCode::BAD_REQUEST).into());
+    }
 
-pub async fn get_all_items(query: GetAllItemsReqQuery, state: StateHandle) -> Result<impl Reply> {
-    let market_items = state
-        .get(query.lang.as_deref())
-        .ok_or(Error::server_error())?;
+    let uri = &conf.oauth_client_token_endpoint_discord;
+    let body = json!({
+        "grant_type": "refresh_token",
+        "client_id": conf.oauth_client_id_discord,
+        "client_secret": conf.oauth_client_secret_discord,
+        "refresh_token": data.refresh_token,
+    });
 
-    Ok(warp::http::Response::builder()
-        .header(
-            warp::http::header::CONTENT_TYPE,
-            warp::http::HeaderValue::from_static("application/json"),
-        )
-        .header(
-            warp::http::header::CONTENT_ENCODING,
-            warp::http::HeaderValue::from_static("gzip"),
-        )
-        .body(market_items)
-        .unwrap())
+    let response = reqwest::Client::new()
+        .post(uri)
+        .form(&body)
+        .send()
+        .await
+        .server_error()?;
+
+    let data = response
+        .error_for_status()
+        .server_error()?
+        .json::<models::AccessTokenResponse>()
+        .await
+        .server_error()?;
+
+    Ok(warp::reply::json(&data))
 }

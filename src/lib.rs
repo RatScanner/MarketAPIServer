@@ -2,15 +2,9 @@
 
 mod config;
 mod db;
-mod fetch;
-mod server;
-mod service;
-mod state;
+pub mod server;
 
-pub use self::{
-    config::{Config, ConfigHandle, Environment},
-    server::models,
-};
+pub use self::config::{Config, ConfigHandle, Environment};
 
 pub async fn init(
     conf: ConfigHandle,
@@ -37,19 +31,8 @@ pub async fn init(
     // Run migrations
     run_migrations(&db).await.unwrap();
 
-    // Init state
-    let state = state::State::new();
-    if let Err(e) = state.update_from_db(&db).await {
-        log::error!("failed to update from db: {}", e);
-    }
-
-    // Start service
-    if conf.service {
-        service::start(state.clone(), db.clone());
-    }
-
     // Start server
-    server::init(state, conf, db).await
+    server::init(conf, db).await
 }
 
 pub async fn start(conf: ConfigHandle, addr: impl Into<std::net::IpAddr>) {
