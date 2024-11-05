@@ -1,6 +1,6 @@
 [package]
 name = "market-api-server"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Blightbuster <blight.developer@gmail.com>"]
 edition = "2018"
 
